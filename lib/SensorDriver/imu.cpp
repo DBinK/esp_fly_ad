@@ -1,12 +1,22 @@
 #include "imu.h"
 
+
+/**
+ * IMUClass类的构造函数
+ * 该构造函数用于初始化IMU（惯性测量单元）传感器的SPI通信
+ * 
+ * @param sck SPI时钟线引脚编号
+ * @param miso SPI数据输入线（主设备输入，从设备输出）引脚编号
+ * @param mosi SPI数据输出线（主设备输出，从设备输入）引脚编号
+ * @param cs SPI芯片选择线引脚编号
+ */
 IMUClass::IMUClass(int sck, int miso, int mosi, int cs)
-    : customSPI(HSPI),
-      imuSensor(customSPI, cs),
-      CUSTOM_SPI_SCK(sck),
-      CUSTOM_SPI_MISO(miso),
-      CUSTOM_SPI_MOSI(mosi),
-      CUSTOM_SPI_CS(cs),
+    : customSPI(HSPI), // 初始化自定义SPI通信对象
+      imuSensor(customSPI, cs), // 初始化IMU传感器对象
+      CUSTOM_SPI_SCK(sck), // 设置SPI时钟线引脚
+      CUSTOM_SPI_MISO(miso), // 设置SPI数据输入线引脚
+      CUSTOM_SPI_MOSI(mosi), // 设置SPI数据输出线引脚
+      CUSTOM_SPI_CS(cs), // 设置SPI芯片选择线引脚
       lastUpdate(0) {} // 初始化 lastUpdate
 
 bool IMUClass::begin()
