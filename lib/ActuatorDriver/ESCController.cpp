@@ -1,13 +1,22 @@
 #include "ESCController.h"
 
-ESCController::ESCController(int pin, int channel, int freq, int min_us, int max_us, int max_thr, int min_accu) {
+/**
+ * 构造函数：初始化ESC控制器
+ * 
+ * @param pin PWM信号引脚
+ * @param channel PWM通道号
+ * @param freq PWM频率
+ * @param min_us PWM最小脉宽
+ * @param max_us PWM最大脉宽
+ * @param max_thr 最大油门值
+ */
+ESCController::ESCController(int pin, int channel, int freq, int min_us, int max_us, int max_thr) {
     this->pin = pin;
     this->channel = channel;
     this->freq = freq;
     this->min_us = min_us;
     this->max_us = max_us;
     this->max_thr = max_thr;
-    this->min_accu = min_accu;
     this->limit_min_thr = 0;
     this->limit_max_thr = max_thr;
     this->target_thr = 0;

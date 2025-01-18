@@ -4,21 +4,8 @@
 
 IMUClass imu;  // 使用自定义引脚 IMUClass imu(10, 11, 12, 13);
 
-// 定义电机引脚和通道
-#define M1_PIN 18
-#define M1_CHANNEL 0
-#define M2_PIN 16
-#define M2_CHANNEL 1
-#define M3_PIN 21
-#define M3_CHANNEL 2
-#define M4_PIN 17
-#define M4_CHANNEL 3
-
-// 定义推力限制
-#define LIMIT_MIN_THR 0
-#define LIMIT_MAX_THR 1000
-
-QuadMotorController quadMotorController(M1_PIN, M1_CHANNEL, M2_PIN, M2_CHANNEL, M3_PIN, M3_CHANNEL, M4_PIN, M4_CHANNEL, LIMIT_MIN_THR, LIMIT_MAX_THR);
+// QuadMotorController quadMotorController; // 使用自定义引脚 
+QuadMotorController motors(18, 16, 21, 17);
 
 void setup() {
     Serial.begin(115200);
@@ -26,11 +13,11 @@ void setup() {
 
     // 设置电机推力
     int thr_list[4] = {200, 300, 400, 500};
-    quadMotorController.setMotorsThr(thr_list);
+    motors.setMotorsThr(thr_list);
 
     // 获取并打印电机推力
     int thr_list_read[4];
-    quadMotorController.getMotorsThr(thr_list_read);
+    motors.getMotorsThr(thr_list_read);
     Serial.println("Motor Thrust Values:");
     for (int i = 0; i < 4; i++) {
         Serial.print("Motor ");
@@ -48,10 +35,10 @@ void setup() {
 
     // 设置相对推力
     int thr_relative_list[4] = {50, -1000, -2000, -600};
-    quadMotorController.setMotorsThrRelative(thr_relative_list);
+    motors.setMotorsThrRelative(thr_relative_list);
 
     // 获取并打印电机推力
-    quadMotorController.getMotorsThr(thr_list_read);
+    motors.getMotorsThr(thr_list_read);
     Serial.println("Motor Thrust Values after Relative Adjustment:");
     for (int i = 0; i < 4; i++) {
         Serial.print("Motor ");
@@ -68,10 +55,10 @@ void setup() {
     }
 
     // 重置电机推力
-    quadMotorController.reset();
+    motors.reset();
 
     // 获取并打印电机推力
-    quadMotorController.getMotorsThr(thr_list_read);
+    motors.getMotorsThr(thr_list_read);
     Serial.println("Motor Thrust Values after Reset:");
     for (int i = 0; i < 4; i++) {
         Serial.print("Motor ");
