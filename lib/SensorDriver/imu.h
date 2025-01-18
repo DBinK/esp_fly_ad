@@ -27,6 +27,8 @@ public:
     float getYaw();
     void getPitchRollYaw(float &pitch, float &roll, float &yaw);
 
+    void calculateGyrZBias(int numSamples);
+
 
 private:
     SPIClass customSPI;
@@ -47,6 +49,9 @@ private:
     // 时间相关变量
     unsigned long lastUpdate; // 上次更新时间
     float deltat; // 时间间隔
+
+    // 陀螺仪零偏
+    float gyrZBias = 0.0;
 };
 
 #endif // IMU_H

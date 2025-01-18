@@ -85,7 +85,7 @@ float IMUClass::getRoll()
 float IMUClass::getYaw()
 {
     deltat = deltatUpdate(); // 更新时间间隔
-    yaw += gyrZ * deltat;    // 陀螺仪数据单位是度每秒，需要乘以时间间隔（毫秒）得到角度变化
+    yaw += (gyrZ - gyrZBias) * deltat;    // 陀螺仪数据单位是度每秒，需要乘以时间间隔（毫秒）得到角度变化
     if (yaw < 0)
         yaw += 360; // 保证 yaw 在 0 到 360 度之间
     if (yaw >= 360)
@@ -98,4 +98,20 @@ void IMUClass::getPitchRollYaw(float &pitch, float &roll, float &yaw)
     pitch = getPitch();
     roll = getRoll();
     yaw = getYaw();
+}
+
+void IMUClass::calculateGyrZBias(int numSamples = 100)
+{
+    // 计算 gyrZ 的零漂值的代码
+    float sum = 0.0f;
+    for (int i = 0; i < numSamples; ++i)
+    {
+        update();
+        Serial.printf("mesuring gyrZ: %f \n", gyrZ);
+        sum += gyrZ;
+        delay(10); // 稍作延迟以获取稳定的数据
+    }
+    gyrZBias = sum / numSamples;
+    Serial.printf("gyrZ Bias: %f \n", gyrZBias);
+    delay(3000); // 等待3秒以查看零漂值
 }
