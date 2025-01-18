@@ -24,7 +24,7 @@ bool IMUClass::begin()
     return true;           // 初始化成功
 }
 
-void IMUClass::getData()
+void IMUClass::update()
 {
     // 读取传感器数据
     imuSensor.getAGT();
@@ -37,6 +37,16 @@ void IMUClass::getData()
     gyrY = imuSensor.gyrY();
     gyrZ = imuSensor.gyrZ();
     temp = imuSensor.temp();
+}
+
+void IMUClass::getAccData(float &ax, float &ay, float &az)
+{
+    ax = accX;  ay = accY;  az = accZ;  // 将数据保存到参数中
+}
+
+void IMUClass::getGyrData(float &gx, float &gy, float &gz)
+{
+    gx = gyrX;  gy = gyrY;  gz = gyrZ;  // 将数据保存到参数中
 }
 
 // 获取传感器数据
@@ -81,4 +91,11 @@ float IMUClass::getYaw()
     if (yaw >= 360)
         yaw -= 360;
     return yaw;
+}
+
+void IMUClass::getPitchRollYaw(float &pitch, float &roll, float &yaw)
+{
+    pitch = getPitch();
+    roll = getRoll();
+    yaw = getYaw();
 }

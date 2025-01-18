@@ -8,7 +8,9 @@ class IMUClass {
 public:
     IMUClass(int sck = 3, int miso = 7, int mosi = 5, int cs = 9);
     bool begin();
-    void getData();
+    void update();
+    void getAccData(float &accX, float &accY, float &accZ);
+    void getGyrData(float &gyrX, float &gyrY, float &gyrZ);
     float getAccX() const;
     float getAccY() const;
     float getAccZ() const;
@@ -23,6 +25,7 @@ public:
     float getPitch();
     float getRoll();
     float getYaw();
+    void getPitchRollYaw(float &pitch, float &roll, float &yaw);
 
 
 private:
