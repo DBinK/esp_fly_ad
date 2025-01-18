@@ -1,6 +1,10 @@
 #include <Arduino.h>
 #include "QuadMotorController.h"
 
+#include "imu.h"
+
+IMUClass imu;  // 使用自定义引脚 IMUClass imu(10, 11, 12, 13);
+
 // 定义电机引脚和通道
 #define M1_PIN 18
 #define M1_CHANNEL 0

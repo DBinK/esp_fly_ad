@@ -1,46 +1,86 @@
 #include <Arduino.h>
+#include "QuadMotorController.h"
 #include "imu.h"
 
 IMUClass imu;  // 使用自定义引脚 IMUClass imu(10, 11, 12, 13);
 
-float gx, gy, gz, ax, ay, az;
-float pitch, roll, yaw;
-float deltat;
+// 定义电机引脚和通道
+#define M1_PIN 18
+#define M1_CHANNEL 0
+#define M2_PIN 16
+#define M2_CHANNEL 1
+#define M3_PIN 21
+#define M3_CHANNEL 2
+#define M4_PIN 17
+#define M4_CHANNEL 3
+
+// 定义推力限制
+#define LIMIT_MIN_THR 0
+#define LIMIT_MAX_THR 1000
+
+QuadMotorController quadMotorController(M1_PIN, M1_CHANNEL, M2_PIN, M2_CHANNEL, M3_PIN, M3_CHANNEL, M4_PIN, M4_CHANNEL, LIMIT_MIN_THR, LIMIT_MAX_THR);
 
 void setup() {
     Serial.begin(115200);
-    while (!Serial) {}
+    while (!Serial) {} // 等待串口连接
 
-    Serial.println("Start...");
-    
-    if (!imu.begin()) {
-        Serial.println("IMU initialization unsuccessful");
-        while (1) {}
+    // 设置电机推力
+    int thr_list[4] = {200, 300, 400, 500};
+    quadMotorController.setMotorsThr(thr_list);
+
+    // 获取并打印电机推力
+    int thr_list_read[4];
+    quadMotorController.getMotorsThr(thr_list_read);
+    Serial.println("Motor Thrust Values:");
+    for (int i = 0; i < 4; i++) {
+        Serial.print("Motor ");
+        Serial.print(i + 1);
+        Serial.print(": ");
+        Serial.println(thr_list_read[i]);
     }
-    
-    Serial.println("ICM42688 begin...");
-    analogWrite(2, 512);
 
-    imu.calculateGyrZBias(100);  // 计算陀螺仪Z轴零偏
+    // 等待一段时间
+    int wait_s = 5;
+    for (int i = 0; i < wait_s; i++) {
+        Serial.printf("Wait for %d seconds...\n", i);
+        delay(1000);
+    }
+
+    // 设置相对推力
+    int thr_relative_list[4] = {50, -1000, -2000, -600};
+    quadMotorController.setMotorsThrRelative(thr_relative_list);
+
+    // 获取并打印电机推力
+    quadMotorController.getMotorsThr(thr_list_read);
+    Serial.println("Motor Thrust Values after Relative Adjustment:");
+    for (int i = 0; i < 4; i++) {
+        Serial.print("Motor ");
+        Serial.print(i + 1);
+        Serial.print(": ");
+        Serial.println(thr_list_read[i]);
+    }
+
+    // 等待一段时间
+    wait_s = 5;
+    for (int i = 0; i < wait_s; i++) {
+        Serial.printf("Wait for %d seconds...\n", i);
+        delay(1000);
+    }
+
+    // 重置电机推力
+    quadMotorController.reset();
+
+    // 获取并打印电机推力
+    quadMotorController.getMotorsThr(thr_list_read);
+    Serial.println("Motor Thrust Values after Reset:");
+    for (int i = 0; i < 4; i++) {
+        Serial.print("Motor ");
+        Serial.print(i + 1);
+        Serial.print(": ");
+        Serial.println(thr_list_read[i]);
+    }
 }
 
-
 void loop() {
-
-    imu.update();
-    
-    // 显示数据
-    // Serial.printf("AccX: %f\t AccY: %f\t AccZ: %f\t GyrX: %f\t GyrY: %f\t GyrZ: %f\t Temp: %f\n", 
-    //              ax, ay, az, gx, gy, gz, temp);
-
-    imu.getPitchRollYaw(pitch, roll, yaw);  // 获取姿态角
-    deltat = imu.getDeltat() * 1000;        // ms
-    
-    // 对于倒置的IMU，将pitch和roll加减180度
-    pitch = (pitch > 0) ? (pitch - 180) : (pitch + 180);
-    roll  =  (roll > 0) ?  (roll - 180) :  (roll + 180);
-
-    Serial.printf("Pitch: %.2f\t Roll: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", pitch, roll, yaw, deltat);
-
-    delay(10);
+    // 主循环中不需要执行任何操作
 }
