@@ -43,9 +43,9 @@ void IMUClass::update()
     accX = imuSensor.accX();
     accY = imuSensor.accY();
     accZ = imuSensor.accZ();
-    gyrX = imuSensor.gyrX();
-    gyrY = imuSensor.gyrY();
-    gyrZ = imuSensor.gyrZ();
+    gyrX = imuSensor.gyrX() - gyrXBias; // 减去零漂值
+    gyrY = imuSensor.gyrY() - gyrYBias;
+    gyrZ = imuSensor.gyrZ() - gyrZBias;
     temp = imuSensor.temp();
 }
 
@@ -95,7 +95,7 @@ float IMUClass::getRoll()
 float IMUClass::getYaw()
 {
     deltat = deltatUpdate(); // 更新时间间隔
-    yaw += (gyrZ - gyrZBias) * deltat;    // 陀螺仪数据单位是度每秒，需要乘以时间间隔（毫秒）得到角度变化
+    yaw += (gyrZ) * deltat;    // 陀螺仪数据单位是度每秒，需要乘以时间间隔（毫秒）得到角度变化
     if (yaw < 0)
         yaw += 360; // 保证 yaw 在 0 到 360 度之间
     if (yaw >= 360)
@@ -110,18 +110,30 @@ void IMUClass::getPitchRollYaw(float &pitch, float &roll, float &yaw)
     yaw = getYaw();
 }
 
-void IMUClass::calculateGyrZBias(int numSamples = 100)
+void IMUClass::calculateGyrBias(int numSamples, int sec)
 {
-    // 计算 gyrZ 的零漂值的代码
-    float sum = 0.0f;
+    // 计算 gyrX, gyrY, gyrZ 的零漂值的代码
+    float sumX = 0.0f;
+    float sumY = 0.0f;
+    float sumZ = 0.0f;
+
     for (int i = 0; i < numSamples; ++i)
     {
         update();
-        Serial.printf("mesuring gyrZ: %f \n", gyrZ);
-        sum += gyrZ;
+        Serial.printf("measuring gyrX: %f, gyrY: %f, gyrZ: %f \n", gyrX, gyrY, gyrZ);
+        sumX += gyrX;
+        sumY += gyrY;
+        sumZ += gyrZ;
         delay(10); // 稍作延迟以获取稳定的数据
     }
-    gyrZBias = sum / numSamples;
+
+    gyrXBias = sumX / numSamples;
+    gyrYBias = sumY / numSamples;
+    gyrZBias = sumZ / numSamples;
+
+    Serial.printf("gyrX Bias: %f \n", gyrXBias);
+    Serial.printf("gyrY Bias: %f \n", gyrYBias);
     Serial.printf("gyrZ Bias: %f \n", gyrZBias);
-    delay(3000); // 等待3秒以查看零漂值
+
+    delay(sec*1000); // 等待3秒以查看零漂值
 }

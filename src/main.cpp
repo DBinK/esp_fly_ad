@@ -5,6 +5,7 @@
 #include "now.h"
 #include "motors.h"
 #include "config.h"
+#include "utility.h"
 
 // 创建数据结构体
 TargetAngle tgAngle;
@@ -36,6 +37,7 @@ QuickPID pidPitchRate(&msRate.pitch, &tgRate.pitch, &tgRate.pitch,
 QuickPID pidYawRate(&msRate.yaw, &tgRate.yaw, &tgRate.yaw, YAW_RATE_P, 
                         YAW_RATE_I, YAW_RATE_D, QuickPID::Action::direct);
 
+LowPassFilter lpf(0.1);
 
 void setup() {
     // 初始化串口
@@ -48,7 +50,7 @@ void setup() {
         Serial.println("IMU initialization unsuccessful");
         while (1) {}
     }
-    imu.calculateGyrZBias(100);  // 计算陀螺仪Z轴零偏
+    imu.calculateGyrBias(500, 3);  // 计算陀螺仪Z轴零偏
     Serial.println("初始化 ICM4268 成功...");
 
     // 初始化PID
@@ -66,6 +68,13 @@ void setup() {
     pidYawRate.SetTunings(YAW_RATE_P, YAW_RATE_I, YAW_RATE_D);
     pidYawRate.SetMode(1);  
 
+    // 初始化电机
+    motors.reset(); // 重置电机
+    // 设置电机推力
+    int thr_list[4] = {200, 300, 400, 500};
+    motors.setMotorsThr(thr_list);
+
+    delay(1000);
 }
 
 
@@ -81,12 +90,19 @@ void loop() {
     imu.getGyrData(msRate.pitch, msRate.roll, msRate.yaw);  // 获取角速度
     deltat = imu.getDeltat() * 1000;        // ms
     
-    // 对于倒置的IMU，将pitch和roll加减180度
+    // 对于倒置的IMU，将pitch和roll加减180度, roll 取反
     msAngle.pitch = (msAngle.pitch > 0) ? (msAngle.pitch - 180) : (msAngle.pitch + 180);
     msAngle.roll  =  -((msAngle.roll > 0) ?  (msAngle.roll - 180) :  (msAngle.roll + 180));
 
+    // 低通滤波
+    float filteredRoll = lpf.filter(msAngle.roll);
+
     // Serial.printf("rate: Pitch: %.2f\t Roll: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", msRate.pitch, msRate.roll, msRate.yaw, deltat);
-    Serial.printf("angle: Pitch: %.2f\t Roll: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", msAngle.pitch, msAngle.roll, msAngle.yaw, deltat);
+    Serial.printf("angle: Pitch: %.2f\t Roll: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", msAngle.pitch, filteredRoll, msAngle.yaw, deltat);
+
+    
+    int motorThrs[4] = {(int)msAngle.pitch*5, 10, 10, (int)msAngle.roll*5};
+    motors.setMotorsThr(motorThrs); // 设置电机转速
 
     delay(10);
 }

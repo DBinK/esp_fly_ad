@@ -27,7 +27,7 @@ public:
     float getYaw();
     void getPitchRollYaw(float &pitch, float &roll, float &yaw);
 
-    void calculateGyrZBias(int numSamples);
+    void calculateGyrBias(int numSamples=500, int sec=1);
 
 
 private:
@@ -51,6 +51,8 @@ private:
     float deltat; // 时间间隔
 
     // 陀螺仪零偏
+    float gyrXBias = 0.0;
+    float gyrYBias = 0.0;
     float gyrZBias = 0.0;
 };
 

@@ -48,7 +48,7 @@ void setup() {
         Serial.println("IMU initialization unsuccessful");
         while (1) {}
     }
-    imu.calculateGyrZBias(100);  // 计算陀螺仪Z轴零偏
+    imu.calculateGyrBias(100);  // 计算陀螺仪Z轴零偏
     Serial.println("初始化 ICM4268 成功...");
 
     // 初始化PID
