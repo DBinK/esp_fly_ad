@@ -70,11 +70,6 @@ void setup() {
 
     // 初始化电机
     motors.reset(); // 重置电机
-    // 设置电机推力
-    int thr_list[4] = {200, 300, 400, 500};
-    motors.setMotorsThr(thr_list);
-
-    delay(1000);
 }
 
 
@@ -100,9 +95,7 @@ void loop() {
     // Serial.printf("rate: Pitch: %.2f\t Roll: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", msRate.pitch, msRate.roll, msRate.yaw, deltat);
     Serial.printf("angle: Pitch: %.2f\t Roll: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", msAngle.pitch, filteredRoll, msAngle.yaw, deltat);
 
-    
-    int motorThrs[4] = {(int)msAngle.pitch*5, 10, 10, (int)msAngle.roll*5};
-    motors.setMotorsThr(motorThrs); // 设置电机转速
+    motors.setMotorsThr((int)msAngle.pitch*5, (int)msAngle.roll*5, 10, 10); // 设置电机转速
 
     delay(10);
 }

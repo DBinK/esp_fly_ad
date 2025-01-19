@@ -9,9 +9,9 @@ public:
     QuadMotorController(int m1_pin = 18, int m2_pin = 16, int m3_pin = 21, int m4_pin = 17, int limit_min_thr = 0, int limit_max_thr = 1000);
 
     void setMotorsLimit(int limit_min_thr, int limit_max_thr);
-    void setMotorsThr(int thr_list[]);
-    void setMotorsThrRelative(int thr_list[]);
-    void getMotorsThr(int thr_list[]);
+    void setMotorsThr(int thr1, int thr2, int thr3, int thr4);
+    void setMotorsThrRelative(int thr1, int thr2, int thr3, int thr4);
+    void getMotorsThr();
     void reset();
 
 private:

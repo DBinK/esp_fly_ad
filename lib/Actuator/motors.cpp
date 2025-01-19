@@ -30,29 +30,28 @@ void QuadMotorController::setMotorsLimit(int limit_min_thr, int limit_max_thr)
         motors[i]->setLimit(limit_min_thr, limit_max_thr);
     }
 }
-
-void QuadMotorController::setMotorsThr(int thr_list[])
+void QuadMotorController::setMotorsThr(int thr1, int thr2, int thr3, int thr4)
 {
-    for (int i = 0; i < 4; i++)
-    {
-        motors[i]->setThr(thr_list[i]);
-    }
+    motors[0]->setThr(thr1);
+    motors[1]->setThr(thr2);
+    motors[2]->setThr(thr3);
+    motors[3]->setThr(thr4);
 }
 
-void QuadMotorController::setMotorsThrRelative(int thr_list[])
+void QuadMotorController::setMotorsThrRelative(int thr1, int thr2, int thr3, int thr4)
 {
-    for (int i = 0; i < 4; i++)
-    {
-        motors[i]->setThrRelative(thr_list[i]);
-    }
+    motors[0]->setThrRelative(thr1);
+    motors[1]->setThrRelative(thr2);
+    motors[2]->setThrRelative(thr3);
+    motors[3]->setThrRelative(thr4);
 }
 
-void QuadMotorController::getMotorsThr(int thr_list[])
+void QuadMotorController::getMotorsThr()
 {
-    for (int i = 0; i < 4; i++)
-    {
-        thr_list[i] = motors[i]->getThr();
-    }
+    motors[0]->getThr();
+    motors[1]->getThr();
+    motors[2]->getThr();
+    motors[3]->getThr();
 }
 
 void QuadMotorController::reset()
