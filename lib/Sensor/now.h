@@ -5,6 +5,7 @@
 #include <WiFi.h>
 #include <ArduinoJson.h>
 #include "ESPNowW.h"
+#include <driver/timer.h> // 添加头文件以使用硬件定时器
 
 class ESPNowReceiver {
 public:
@@ -26,6 +27,9 @@ private:
     uint8_t lastMacAddr[6]; // 存储最后接收到的MAC地址
     unsigned long lastReceiveTime; // 存储最后接收到数据的时间
     const unsigned long signalTimeout = 1000; // 信号丢失超时时间（毫秒）
+    
+    hw_timer_t *timer; // 添加定时器成员变量
+    static void IRAM_ATTR timerCallback(); // 添加定时器回调函数声明
 };
 
 #endif // NOW_H

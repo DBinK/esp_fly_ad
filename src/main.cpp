@@ -29,14 +29,14 @@ void loop() {
     }
     Serial.println();
 
-    Serial.println("Last MAC Address:");
-    for (int i = 0; i < 6; i++) {
-        Serial.print(lastMacAddr[i], HEX);
-        Serial.print(" ");
-    }
-    Serial.println();
+    // Serial.println("Last MAC Address:");
+    // for (int i = 0; i < 6; i++) {
+    //     Serial.print(lastMacAddr[i], HEX);
+    //     Serial.print(" ");
+    // }
+    // Serial.println();
 
-    receiver.isSignalLost();  // 检测信号是否丢失
+    // receiver.isSignalLost();  // 检测信号是否丢失
 
     // 延迟一段时间后再次测试
     vTaskDelay(10 / portTICK_PERIOD_MS);

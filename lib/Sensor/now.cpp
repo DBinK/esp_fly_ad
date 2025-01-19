@@ -8,6 +8,7 @@ ESPNowReceiver::ESPNowReceiver() {  // 默认构造函数
     this->parsedDataSize = 0;
     memset(lastMacAddr, 0, sizeof(lastMacAddr)); // 初始化最后接收到的MAC地址
     lastReceiveTime = 0; // 初始化最后接收到数据的时间
+    timer = NULL; // 初始化定时器指针
 }
 
 ESPNowReceiver::ESPNowReceiver(uint8_t* mac) {
@@ -15,6 +16,7 @@ ESPNowReceiver::ESPNowReceiver(uint8_t* mac) {
     this->parsedDataSize = 0;
     memset(lastMacAddr, 0, sizeof(lastMacAddr)); // 初始化最后接收到的MAC地址
     lastReceiveTime = 0; // 初始化最后接收到数据的时间
+    timer = NULL; // 初始化定时器指针
 }
 
 void ESPNowReceiver::begin() {
@@ -26,6 +28,12 @@ void ESPNowReceiver::begin() {
     ESPNow.init();
     ESPNow.reg_recv_cb(onReceiveStatic); // 注册静态成员函数作为回调
     instance = this; // 设置实例指针
+
+    // 初始化定时器
+    timer = timerBegin(0, 80, true); // 使用定时器0，分频系数80，计数器向上计数
+    timerAttachInterrupt(timer, &ESPNowReceiver::timerCallback, true); // 将回调函数附加到定时器
+    timerAlarmWrite(timer, 1000000, true); // 设置定时器中断周期为1秒
+    timerAlarmEnable(timer); // 启动定时器中断
 }
 
 // 静态成员函数作为回调
@@ -86,5 +94,13 @@ bool ESPNowReceiver::isSignalLost() {
     else {
         memset(parsedData, 0, sizeof(parsedData)); // 信号丢失，归零数据
         return true;
+    }
+}
+
+// 定时器回调函数
+void IRAM_ATTR ESPNowReceiver::timerCallback() {
+    if (instance != nullptr) {
+        instance->isSignalLost();
+        Serial.println("timerCallback test");
     }
 }
