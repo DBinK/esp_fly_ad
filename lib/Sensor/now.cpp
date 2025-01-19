@@ -7,12 +7,14 @@ ESPNowReceiver::ESPNowReceiver() {  // 默认构造函数
     this->mac = defaultMac;
     this->parsedDataSize = 0;
     memset(lastMacAddr, 0, sizeof(lastMacAddr)); // 初始化最后接收到的MAC地址
+    lastReceiveTime = 0; // 初始化最后接收到数据的时间
 }
 
 ESPNowReceiver::ESPNowReceiver(uint8_t* mac) {
     this->mac = mac;
     this->parsedDataSize = 0;
     memset(lastMacAddr, 0, sizeof(lastMacAddr)); // 初始化最后接收到的MAC地址
+    lastReceiveTime = 0; // 初始化最后接收到数据的时间
 }
 
 void ESPNowReceiver::begin() {
@@ -41,7 +43,7 @@ void ESPNowReceiver::onReceive(const uint8_t* mac_addr, const uint8_t* data, int
     snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
              mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
 
-    JsonDocument doc; 
+    JsonDocument doc; // 创建 JSON 文档
     DeserializationError error = deserializeJson(doc, data);
 
     if (error) {
@@ -52,6 +54,9 @@ void ESPNowReceiver::onReceive(const uint8_t* mac_addr, const uint8_t* data, int
 
     // 存储最后接收到的MAC地址
     memcpy(lastMacAddr, mac_addr, sizeof(lastMacAddr));
+
+    // 更新最后接收到数据的时间
+    lastReceiveTime = millis();
 
     parsedDataSize = doc.size();
     for (int i = 0; i < parsedDataSize && i < 10; i++) {
@@ -71,4 +76,15 @@ int ESPNowReceiver::getParsedDataSize() {
 
 const uint8_t* ESPNowReceiver::getLastMacAddr() {
     return lastMacAddr;
+}
+
+bool ESPNowReceiver::isSignalLost() {
+    unsigned long currentTime = millis();
+    if (currentTime - lastReceiveTime < signalTimeout) {
+        return false;
+    }
+    else {
+        memset(parsedData, 0, sizeof(parsedData)); // 信号丢失，归零数据
+        return true;
+    }
 }
