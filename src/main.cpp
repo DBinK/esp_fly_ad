@@ -83,9 +83,9 @@ void loop() {
     
     // 对于倒置的IMU，将pitch和roll加减180度
     msAngle.pitch = (msAngle.pitch > 0) ? (msAngle.pitch - 180) : (msAngle.pitch + 180);
-    msAngle.roll  =  (msAngle.roll > 0) ?  (msAngle.roll - 180) :  (msAngle.roll + 180);
+    msAngle.roll  =  -((msAngle.roll > 0) ?  (msAngle.roll - 180) :  (msAngle.roll + 180));
 
-    Serial.printf("rate: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", msRate.roll, msRate.pitch, msRate.yaw, deltat);
+    // Serial.printf("rate: Pitch: %.2f\t Roll: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", msRate.pitch, msRate.roll, msRate.yaw, deltat);
     Serial.printf("angle: Pitch: %.2f\t Roll: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", msAngle.pitch, msAngle.roll, msAngle.yaw, deltat);
 
     delay(10);

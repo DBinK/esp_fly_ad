@@ -37,9 +37,9 @@ typedef struct {
 } TargetAngle;   // 目标角度
 
 typedef struct {
-    float roll;
-    float pitch;
-    float yaw;
+    float roll;  // 右倾为负
+    float pitch; // 前倾为负
+    float yaw;   // 逆时针为负
 } MeasureAngle;  // 测量角度
 
 typedef struct {
@@ -49,9 +49,9 @@ typedef struct {
 } TargetRate;     // 目标角速度
 
 typedef struct {
-    float roll;   // gx
-    float pitch;  // gy
-    float yaw;    // gz
+    float roll;   // gx 右倾为负
+    float pitch;  // gy 前倾为负
+    float yaw;    // gz 逆时针为负
 } MeasureRate;    // 测量角速度
 
 
