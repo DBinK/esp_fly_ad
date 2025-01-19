@@ -25,7 +25,7 @@ private:
     int parsedDataSize;
     uint8_t lastMacAddr[6]; // 存储最后接收到的MAC地址
     unsigned long lastReceiveTime; // 存储最后接收到数据的时间
-    const unsigned long signalTimeout = 5000; // 信号丢失超时时间（毫秒）
+    const unsigned long signalTimeout = 1000; // 信号丢失超时时间（毫秒）
 };
 
 #endif // NOW_H
