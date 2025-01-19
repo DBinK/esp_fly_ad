@@ -1,4 +1,4 @@
-#include "ESCController.h"
+#include "esc.h"
 
 /**
  * 构造函数：初始化ESC控制器

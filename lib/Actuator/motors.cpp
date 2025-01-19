@@ -1,4 +1,4 @@
-#include "QuadMotorController.h"
+#include "motors.h"
 
 /**
  * 四旋翼电机控制器类的构造函数

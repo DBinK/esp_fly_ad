@@ -1,7 +1,7 @@
 #ifndef QUADMOTORCONTROLLER_H
 #define QUADMOTORCONTROLLER_H
 
-#include "ESCController.h"
+#include "esc.h"
 
 class QuadMotorController
 {

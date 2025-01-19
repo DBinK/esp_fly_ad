@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "QuadMotorController.h"
+#include "motors.h"
 #include "imu.h"
 
 IMUClass imu;  // 使用自定义引脚 IMUClass imu(10, 11, 12, 13);
@@ -66,8 +66,6 @@ void setup() {
         Serial.print(": ");
         Serial.println(thr_list_read[i]);
     }
-
-    Serial.println("完成测试");
 }
 
 void loop() {
