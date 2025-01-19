@@ -64,6 +64,9 @@ void setup()
     imu.calculateGyrBias(500, 3); // 计算陀螺仪Z轴零偏
     Serial.println("初始化 ICM4268 成功...");
 
+    // 初始化NOW
+    receiver.begin();
+
     // 初始化PID
     pidRollAngle.SetTunings(ROL_ANGLE_P, ROL_ANGLE_I, ROL_ANGLE_D);
     pidRollAngle.SetMode(1); // 设置PID模式为自动控制
