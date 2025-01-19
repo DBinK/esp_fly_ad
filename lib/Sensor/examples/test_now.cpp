@@ -37,5 +37,5 @@ void loop() {
     Serial.println();
 
     // 延迟一段时间后再次测试
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    delay(10);
 }
