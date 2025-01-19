@@ -1,5 +1,12 @@
 #include "now.h"
 
+
+// 将给定的值映射到给定的目标范围
+float map_value_now(float value, float original_min, float original_max, float target_min, float target_max)
+{
+    return target_min + (value - original_min) * (target_max - target_min) / (original_max - original_min);
+}
+
 ESPNowReceiver* ESPNowReceiver::instance = nullptr; // 声明静态成员变量
 
 ESPNowReceiver::ESPNowReceiver() {  // 默认构造函数
@@ -75,6 +82,18 @@ void ESPNowReceiver::onReceive(const uint8_t* mac_addr, const uint8_t* data, int
 }
 
 int* ESPNowReceiver::getParsedData() {
+    return parsedData;
+}
+int* ESPNowReceiver::getParsedDataFix(){
+    if (parsedData[0] != 0) {
+        // 减去校准偏移值, 并映射到 -127 到 127
+        parsedData[1] = (int)map_value_now(parsedData[1] - OFFSET_ly, 0, 255, -127, 127);
+        parsedData[2] = (int)map_value_now(parsedData[2] - OFFSET_lx, 0, 255, -127, 127);
+        parsedData[4] = (int)map_value_now(parsedData[4] - OFFSET_ry, 0, 255, -127, 127);
+        parsedData[3] = (int)map_value_now(parsedData[3] - OFFSET_rx, 0, 255, -127, 127);
+
+        Serial.printf("摇杆映射后数据: lx=%d, ly=%d, rx=%d, ry=%d\n", parsedData[2], parsedData[1], parsedData[3], parsedData[4]);
+    }
     return parsedData;
 }
 

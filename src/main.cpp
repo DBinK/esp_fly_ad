@@ -89,7 +89,7 @@ void setup()
 static TickType_t xLastWakeTime = 0; // 用于 vTaskDelayUntil 的变量
 void loop()
 {
-    int* parsedData = receiver.getParsedData();
+    int* parsedData = receiver.getParsedDataFix();
     int parsedDataSize = receiver.getParsedDataSize();
     const uint8_t* lastMacAddr = receiver.getLastMacAddr();
 
