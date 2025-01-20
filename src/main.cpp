@@ -12,7 +12,7 @@ TargetAngle tgAngle;
 MeasureAngle msAngle;
 TargetRate tgRate;
 MeasureRate msRate;
-OutRate outRate;
+OutRate outRate;  // 输出角速度控制信号
 
 // 全局变量
 float deltat;
@@ -42,7 +42,7 @@ QuickPID pidPitchRate(&msRate.pitch, &tgRate.pitch, &outRate.pitch,
 QuickPID pidYawRate(&msRate.yaw, &tgRate.yaw, &outRate.yaw,
                     YAW_RATE_P, YAW_RATE_I, YAW_RATE_D, QuickPID::Action::direct);
 
-LowPassFilter lpf(0.1);
+LowPassFilter lpf(0.3);  // 低通滤波器, 参数越小, 滤波效果越好, 响应时间越慢
 
 void setup()
 {
@@ -69,17 +69,23 @@ void setup()
 
     // 初始化PID
     pidRollAngle.SetTunings(ROL_ANGLE_P, ROL_ANGLE_I, ROL_ANGLE_D);
-    pidRollAngle.SetMode(1); // 设置PID模式为自动控制
+    pidRollAngle.SetOutputLimits(-1000, 1000);  // 设置输出限幅
+    pidRollAngle.SetMode(1);                    // 设置PID模式为自动控制
     pidPitchAngle.SetTunings(PIT_ANGLE_P, PIT_ANGLE_I, PIT_ANGLE_D);
+    pidPitchAngle.SetOutputLimits(-1000, 1000);
     pidPitchAngle.SetMode(1);
     // pidYawAngle.SetTunings(YAW_ANGLE_P, YAW_ANGLE_I, YAW_ANGLE_D);
+    // pidYawAngle.SetOutputLimits(-1000, 1000);
     // pidYawAngle.SetMode(1);
 
     pidRollRate.SetTunings(ROL_RATE_P, ROL_RATE_I, ROL_RATE_D);
+    pidRollRate.SetOutputLimits(-1000, 1000);
     pidRollRate.SetMode(1);
     pidPitchRate.SetTunings(PIT_RATE_P, PIT_RATE_I, PIT_RATE_D);
+    pidPitchRate.SetOutputLimits(-1000, 1000);
     pidPitchRate.SetMode(1);
     pidYawRate.SetTunings(YAW_RATE_P, YAW_RATE_I, YAW_RATE_D);
+    pidYawRate.SetOutputLimits(-1000, 1000);
     pidYawRate.SetMode(1);
 
     // 初始化电机
@@ -117,13 +123,15 @@ void loop()
 
     // 低通滤波
     msAngle.pitch = lpf.filter(msAngle.pitch);
-    msAngle.roll = lpf.filter(msAngle.roll);
+    msAngle.roll  = lpf.filter(msAngle.roll);
+    msAngle.yaw   = lpf.filter(msAngle.yaw);
 
-    // Serial.printf("rate: Pitch: %.2f\t Roll: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", msRate.pitch, msRate.roll, msRate.yaw, deltat);
-    // Serial.printf("angle: Pitch: %.2f\t Roll: %.2f\t Yaw: %.2f\t deltat:%.6f ms \n",
-    //              msAngle.pitch, msAngle.roll, msAngle.yaw, deltat);
+    // Serial.printf("rate: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", 
+    //              msRate.roll, msRate.pitch, msRate.yaw, deltat);
+    Serial.printf("angle: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n",
+                  msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
 
-    // PID 控制
+    // PID 运算
     pidRollAngle.Compute();
     pidPitchAngle.Compute();
     // pidYawAngle.Compute();
@@ -131,6 +139,12 @@ void loop()
     pidPitchRate.Compute();
     pidYawRate.Compute();
 
+    // PID 输出
+    Serial.printf(" tgRate: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n", 
+                    tgRate.roll, tgRate.pitch, tgRate.yaw, deltat);
+    // Serial.printf("outRate: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", 
+    //              outRate.roll, outRate.pitch, outRate.yaw, deltat);
+    
     // 电机控制
     int rc_thr = 100;
     int motor1 = rc_thr + outRate.roll - outRate.pitch - outRate.yaw;
@@ -138,13 +152,12 @@ void loop()
     int motor3 = rc_thr - outRate.roll + outRate.pitch - outRate.yaw;
     int motor4 = rc_thr + outRate.roll + outRate.pitch + outRate.yaw;
 
-    Serial.printf("out: Pitch: %.2f\t Roll: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", outRate.pitch, outRate.roll, outRate.yaw, deltat);
-    Serial.printf("motors: %d %d %d %d\n", motor1, motor2, motor3, motor4);
+    Serial.printf("motors: %d %d %d %d  rc_thr: %d\n", motor1, motor2, motor3, motor4, rc_thr);
 
     motors.setMotorsThr(motor1, motor2, motor3, motor4); // 设置电机推力
 
-    // 修正 vTaskDelayUntil 的使用
-    if (xLastWakeTime == 0)
+
+    if (xLastWakeTime == 0)  // 修正 vTaskDelayUntil 的使用
     {
         xLastWakeTime = xTaskGetTickCount();
     }
