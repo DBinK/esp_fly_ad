@@ -104,20 +104,6 @@ void imuControlTask(void *parameter) {
     float motor4 = 0;
 
     while (1) {
-        // 检查是否准备好
-        if (!isReady) {
-
-            delay(1000);       // 延时 1s
-
-            motors.reset();    // 重置电机
-            imu.begin();       // 重新初始化 IMU
-
-            rc_thr = 0;        // 重置推力
-            xLastWakeTime = 0; // 重置时间, 不然会导致 vTaskDelayUntil 卡住
-
-            Serial.println("未解锁, 重置电机和IMU");
-            continue;
-        }
 
         // 更新 IMU 数据
         imu.update();
@@ -136,16 +122,16 @@ void imuControlTask(void *parameter) {
         msAngle.roll = lpf.filter(msAngle.roll);
         msAngle.yaw = lpf.filter(msAngle.yaw);
 
-        // 摔倒检测
-        if (abs(msAngle.roll) > 20 || abs(msAngle.pitch) > 30) {
-            isReady = false;
-            Serial.println("检测到摔倒, 紧急停止...");
-            continue;
-        }
-
         // 打印角度数据
         Serial.printf("测量值: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n",
                       msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
+
+        // 摔倒检测
+        if (abs(msAngle.roll) > 30 || abs(msAngle.pitch) > 30) {
+            isReady = false;
+            motors.reset(); 
+            Serial.println("检测到摔倒, 紧急停止...");
+        }
 
         // PID 运算
         pidRollAngle.Compute();
@@ -184,7 +170,25 @@ void imuControlTask(void *parameter) {
         Serial.printf("motors: %.2f %.2f %.2f %.2f  rc_thr: %.2f\n", 
                         motor1, motor2, motor3, motor4, rc_thr);
 
-        motors.setMotorsThr(motor1, motor2, motor3, motor4); // 设置电机推力
+        // 检查是否准备好
+        if (isReady) {
+            // 准备好的话, 发送电机控制指令
+            motors.setMotorsThr(motor1, motor2, motor3, motor4); // 设置电机推力
+
+        } else {
+            // 未准备好, 重置电机和IMU
+            // delay(10);       // 延时 1s
+
+            motors.reset();    // 重置电机
+            imu.begin();       // 重新初始化 IMU
+
+            rc_thr = 0;        // 重置推力
+
+            // xLastWakeTime = 0; // 重置时间, 不然会导致 vTaskDelayUntil 卡住
+
+            Serial.println("未解锁, 重置电机和IMU");
+        }
+
 
         // 修正 vTaskDelayUntil 的使用
         if (xLastWakeTime == 0) {
