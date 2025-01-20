@@ -19,7 +19,7 @@ float deltat; // IMU循环时间间隔
 bool isReady = false;
 
 int lx, ly, rx, ry; // 摇杆数据
-int rc_thr = 0;     // 推力
+float rc_thr = 0;     // 推力
 
 // 创建IMU对象
 IMUClass imu; // 使用自定义引脚 IMUClass imu(10, 11, 12, 13);
@@ -46,7 +46,7 @@ QuickPID pidPitchRate(&msRate.pitch, &outRate.pitch, &tgRate.pitch,
 QuickPID pidYawRate(&msRate.yaw, &outRate.yaw, &tgRate.yaw,
                     YAW_RATE_P, YAW_RATE_I, YAW_RATE_D, QuickPID::Action::direct);
 
-LowPassFilter lpf(0.3);  // 低通滤波器, 参数越小, 滤波效果越好, 响应时间越慢
+LowPassFilter lpf(0.7);  // 低通滤波器, 参数越小, 滤波效果越好, 响应时间越慢
 
 
 // 任务函数定义
@@ -88,7 +88,7 @@ void remoteDataTask(void *parameter) {
             Serial.print(parsedData[i]);
             Serial.print(" ");
         }
-        Serial.println();
+        Serial.println("\n");
 
         // 延时一段时间再进行下一次数据处理
         vTaskDelay(pdMS_TO_TICKS(10)); // 延时
@@ -97,6 +97,12 @@ void remoteDataTask(void *parameter) {
 
 static TickType_t xLastWakeTime = 0; // 用于 vTaskDelayUntil 的变量
 void imuControlTask(void *parameter) {
+
+    float motor1 = 0;
+    float motor2 = 0;
+    float motor3 = 0;
+    float motor4 = 0;
+
     while (1) {
         // 检查是否准备好
         if (!isReady) {
@@ -130,6 +136,13 @@ void imuControlTask(void *parameter) {
         msAngle.roll = lpf.filter(msAngle.roll);
         msAngle.yaw = lpf.filter(msAngle.yaw);
 
+        // 摔倒检测
+        if (abs(msAngle.roll) > 20 || abs(msAngle.pitch) > 30) {
+            isReady = false;
+            Serial.println("检测到摔倒, 紧急停止...");
+            continue;
+        }
+
         // 打印角度数据
         Serial.printf("测量值: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n",
                       msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
@@ -153,25 +166,29 @@ void imuControlTask(void *parameter) {
         rc_thr = constrain(rc_thr, 0, 300);   // 推力限制
 
         // 电机控制
-        int motor1 = rc_thr + outRate.roll - outRate.pitch - outRate.yaw;
-        int motor2 = rc_thr - outRate.roll - outRate.pitch + outRate.yaw;
-        int motor3 = rc_thr - outRate.roll + outRate.pitch - outRate.yaw;
-        int motor4 = rc_thr + outRate.roll + outRate.pitch + outRate.yaw;
+        motor1 = rc_thr + outRate.roll - outRate.pitch - outRate.yaw;
+        motor2 = rc_thr - outRate.roll - outRate.pitch + outRate.yaw;
+        motor3 = rc_thr - outRate.roll + outRate.pitch - outRate.yaw;
+        motor4 = rc_thr + outRate.roll + outRate.pitch + outRate.yaw;
+
+        motor2 = motor2 + (ry * 0.02);  // 测试用
+        motor3 = motor3 + (rx * 0.02);
+        motor4 = motor4 + (lx * 0.02);
 
         // 限制电机推力范围
-        motor1 = constrain(motor1, 0, 1000);
-        motor2 = constrain(motor2, 0, 1000);
-        motor3 = constrain(motor3, 0, 1000);
-        motor4 = constrain(motor4, 0, 1000);
+        motor1 = constrain(motor1, 0, 1000);  // 左前
+        motor2 = constrain(motor2, 0, 1000);  // 左后 不对
+        motor3 = constrain(motor3, 0, 1000);  // 右后 不对
+        motor4 = constrain(motor4, 0, 1000);  // 右前
 
-        Serial.printf("motors: %d %d %d %d  rc_thr: %d\n", motor1, motor2, motor3, motor4, rc_thr);
+        Serial.printf("motors: %.2f %.2f %.2f %.2f  rc_thr: %.2f\n", 
+                        motor1, motor2, motor3, motor4, rc_thr);
 
         motors.setMotorsThr(motor1, motor2, motor3, motor4); // 设置电机推力
 
         // 修正 vTaskDelayUntil 的使用
         if (xLastWakeTime == 0) {
             xLastWakeTime = xTaskGetTickCount();
-            Serial.printf("Task delay: %d\n", xLastWakeTime);
         }
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10)); // 10ms
     }

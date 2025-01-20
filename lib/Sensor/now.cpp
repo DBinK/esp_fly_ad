@@ -20,14 +20,19 @@ ESPNowReceiver::ESPNowReceiver(uint8_t* mac) {
 }
 
 void ESPNowReceiver::begin() {
+
     Serial.begin(115200);
     Serial.println("ESPNow Receiver Initialized");
+
     WiFi.mode(WIFI_MODE_STA);
     ESPNow.set_mac(mac);
     WiFi.disconnect();
     ESPNow.init();
     ESPNow.reg_recv_cb(onReceiveStatic); // 注册静态成员函数作为回调
     instance = this; // 设置实例指针
+
+    pinMode(15, OUTPUT);  // 设置灯光输出引脚
+    digitalWrite(15, LOW);
 
     // 初始化定时器
     timer = timerBegin(0, 80, true); // 使用定时器0，分频系数80，计数器向上计数
@@ -132,6 +137,6 @@ bool ESPNowReceiver::isSignalLost() {
 void IRAM_ATTR ESPNowReceiver::timerCallback() {
     if (instance != nullptr) {
         instance->isSignalLost();
-        Serial.println("timerCallback test");
+        Serial.println("定时信号丢失检查...");
     }
 }
