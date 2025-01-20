@@ -1,8 +1,11 @@
 #include <Arduino.h>
 #include <QuickPID.h>
 
-#include "motors.h"
 #include "imu.h"
+#include "now.h"
+#include "motors.h"
+#include "config.h"
+#include "utility.h"
 
 IMUClass imu; // 使用自定义引脚 IMUClass imu(10, 11, 12, 13);
 
@@ -34,9 +37,8 @@ void setup()
     Setpoint = 100;
 
     // apply PID gains
+    myPID.SetOutputLimits(-1000, 1000);
     myPID.SetTunings(Kp, Ki, Kd);
-
-    // turn the PID on
     myPID.SetMode(1);
     
     }

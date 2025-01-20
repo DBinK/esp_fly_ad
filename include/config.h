@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 // 角度环数据PID参数
-float ROL_ANGLE_P = 100;
+float ROL_ANGLE_P = 1;
 float ROL_ANGLE_I = 0;
 float ROL_ANGLE_D = 0;
 
@@ -31,7 +31,7 @@ float YAW_RATE_D = 0;
 
 // 预定义结构体
 typedef struct {
-    float roll  = 10;
+    float roll  = 0;
     float pitch = 0;
     float yaw   = 0;
 } TargetAngle;   // 目标角度

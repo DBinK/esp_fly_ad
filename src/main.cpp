@@ -28,18 +28,18 @@ ESPNowReceiver receiver(Mac);
 QuadMotorController motors; // 使用自定义引脚 QuadMotorController motors(9, 8, 7, 6);
 
 // 创建PID对象, 参数在 config.h 中定义, QuickPID(float *Input, float *Output, float *Setpoint);
-QuickPID pidRollAngle(&msAngle.roll, &tgAngle.roll, &tgRate.roll,
+QuickPID pidRollAngle(&msAngle.roll, &tgRate.roll, &tgAngle.roll, 
                       ROL_ANGLE_P, ROL_ANGLE_I, ROL_ANGLE_D, QuickPID::Action::direct);
-QuickPID pidPitchAngle(&msAngle.pitch, &tgAngle.pitch, &tgRate.pitch,
+QuickPID pidPitchAngle(&msAngle.pitch, &tgRate.pitch, &tgAngle.pitch, 
                        PIT_ANGLE_P, PIT_ANGLE_I, PIT_ANGLE_D, QuickPID::Action::direct);
 // QuickPID pidYawAngle(&msAngle.yaw, &tgAngle.yaw, &tgRate.yaw,
 //                         YAW_ANGLE_P, YAW_ANGLE_I, YAW_ANGLE_D, QuickPID::Action::direct);
 
-QuickPID pidRollRate(&msRate.roll, &tgRate.roll, &outRate.roll,
+QuickPID pidRollRate(&msRate.roll, &outRate.roll, &tgRate.roll,
                      ROL_RATE_P, ROL_RATE_I, ROL_RATE_D, QuickPID::Action::direct);
-QuickPID pidPitchRate(&msRate.pitch, &tgRate.pitch, &outRate.pitch,
+QuickPID pidPitchRate(&msRate.pitch, &outRate.pitch, &tgRate.pitch,
                       PIT_RATE_P, PIT_RATE_I, PIT_RATE_D, QuickPID::Action::direct);
-QuickPID pidYawRate(&msRate.yaw, &tgRate.yaw, &outRate.yaw,
+QuickPID pidYawRate(&msRate.yaw, &outRate.yaw, &tgRate.yaw,
                     YAW_RATE_P, YAW_RATE_I, YAW_RATE_D, QuickPID::Action::direct);
 
 LowPassFilter lpf(0.3);  // 低通滤波器, 参数越小, 滤波效果越好, 响应时间越慢
