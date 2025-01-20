@@ -80,14 +80,33 @@ int* ESPNowReceiver::getParsedData() {
 int* ESPNowReceiver::getParsedDataFix(){
     if (parsedData[0] != 0) {
         // 减去校准偏移值, 并映射到 -127 到 127
-        parsedData[1] = (int)map_value(parsedData[1] - OFFSET_ly, 0, 255, -127, 127);
-        parsedData[2] = (int)map_value(parsedData[2] - OFFSET_lx, 0, 255, -127, 127);
-        parsedData[4] = (int)map_value(parsedData[4] - OFFSET_ry, 0, 255, -127, 127);
-        parsedData[3] = (int)map_value(parsedData[3] - OFFSET_rx, 0, 255, -127, 127);
+        parsedDataFix[1] = (int)map_value(parsedData[1] - OFFSET_ly, 0, 255, -127, 127);
+        parsedDataFix[2] = (int)map_value(parsedData[2] - OFFSET_lx, 0, 255, -127, 127);
+        parsedDataFix[4] = (int)map_value(parsedData[4] - OFFSET_ry, 0, 255, -127, 127);
+        parsedDataFix[3] = (int)map_value(parsedData[3] - OFFSET_rx, 0, 255, -127, 127);
 
-        Serial.printf("摇杆映射后数据: lx=%d, ly=%d, rx=%d, ry=%d\n", parsedData[2], parsedData[1], parsedData[3], parsedData[4]);
+        // 保留其它数据
+        parsedDataFix[0] = parsedData[0];  // 手柄 ID 0x01
+        parsedDataFix[5] = parsedData[5];  // abxy & dpad 默认 0x08 
+        parsedDataFix[6] = parsedData[6];  // ls & rs & start & back  0x00
+        parsedDataFix[7] = parsedData[7];  // 预留模式位 0x06
+
+        // Serial.printf("摇杆映射后数据: lx=%d, ly=%d, rx=%d, ry=%d\n", 
+        //                parsedDataFix[2], parsedDataFix[1], parsedDataFix[3], parsedDataFix[4]);
+
+        // 摇杆死区处理
+        for (int i = 1; i < 5; i++) {
+            if (abs(parsedDataFix[i]) < DEAD_AREA) {
+                parsedDataFix[i] = 0;
+                digitalWrite(15, LOW);  // 灭灯
+            }
+            else { // 摇杆不在死区内, 闪烁灯光
+                digitalWrite(15, !digitalRead(15));
+            }
+        }
+        digitalWrite(15, LOW);  // 灭灯
     }
-    return parsedData;
+    return parsedDataFix;
 }
 
 int ESPNowReceiver::getParsedDataSize() {

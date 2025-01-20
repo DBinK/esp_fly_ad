@@ -7,10 +7,12 @@
 #include "ESPNowW.h"
 #include "utility.h"
 
-const int8_t OFFSET_lx = 16;  // 摇杆校准偏移值
-const int8_t OFFSET_ly = 35;
-const int8_t OFFSET_rx =  6;
-const int8_t OFFSET_ry = 16;
+const int8_t OFFSET_lx = -38;  // 摇杆校准偏移值
+const int8_t OFFSET_ly = -21;
+const int8_t OFFSET_rx = -15;
+const int8_t OFFSET_ry = -21;
+
+const int8_t DEAD_AREA = 20;  // 摇杆死区
 
 class ESPNowReceiver {
 public:
@@ -29,7 +31,8 @@ private:
     static ESPNowReceiver* instance; // 声明静态成员变量
 
     uint8_t* mac;
-    int parsedData[10]; // 假设最多解析10个数据
+    int parsedData[8];     // 原始数据
+    int parsedDataFix[8];  // 修正后的数据
     int parsedDataSize;
     uint8_t lastMacAddr[6]; // 存储最后接收到的MAC地址
 

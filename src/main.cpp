@@ -15,7 +15,11 @@ MeasureRate msRate;
 OutRate outRate;  // 输出角速度控制信号
 
 // 全局变量
-float deltat;
+float deltat; // IMU循环时间间隔
+bool isReady = false;
+
+int lx, ly, rx, ry; // 摇杆数据
+int rc_thr = 0;     // 推力
 
 // 创建IMU对象
 IMUClass imu; // 使用自定义引脚 IMUClass imu(10, 11, 12, 13);
@@ -44,24 +48,150 @@ QuickPID pidYawRate(&msRate.yaw, &outRate.yaw, &tgRate.yaw,
 
 LowPassFilter lpf(0.3);  // 低通滤波器, 参数越小, 滤波效果越好, 响应时间越慢
 
+
+// 任务函数定义
+void remoteDataTask(void *parameter) {
+
+    bool waitingForRelease = false; // 等待松开按键
+
+    while (1) {
+        // 更新 ESPNOW 的遥控数据
+        int* parsedData = receiver.getParsedDataFix();
+        int parsedDataSize = receiver.getParsedDataSize();
+        const uint8_t* lastMacAddr = receiver.getLastMacAddr();
+
+        // 紧急停止
+        if (parsedData[6] != 0x0) {
+            isReady = false;
+            Serial.println("紧急停止...");
+        }
+
+        // 解析遥控数据
+        lx = parsedData[1];
+        ly = parsedData[2];
+        rx = parsedData[3];
+        ry = parsedData[4];
+
+        // 外八解锁
+        if (!waitingForRelease && lx < -50 && ly < -50 && rx > 50 && ry < -50 && !isReady) {
+            waitingForRelease = true;
+            Serial.println("请松开按键以解锁...");
+        } else if (waitingForRelease && !(lx < -50 && ly < -50 && rx > 50 && ry < -50)) {
+            waitingForRelease = false;
+            isReady = true;
+            Serial.println("已解锁");
+        }
+        
+        // 打印解析后的数据
+        Serial.print("now Data: ");
+        for (int i = 0; i < parsedDataSize; i++) {
+            Serial.print(parsedData[i]);
+            Serial.print(" ");
+        }
+        Serial.println();
+
+        // 延时一段时间再进行下一次数据处理
+        vTaskDelay(pdMS_TO_TICKS(10)); // 延时
+    }
+}
+
+static TickType_t xLastWakeTime = 0; // 用于 vTaskDelayUntil 的变量
+void imuControlTask(void *parameter) {
+    while (1) {
+        // 检查是否准备好
+        if (!isReady) {
+
+            delay(1000);       // 延时 1s
+
+            motors.reset();    // 重置电机
+            imu.begin();       // 重新初始化 IMU
+
+            rc_thr = 0;        // 重置推力
+            xLastWakeTime = 0; // 重置时间, 不然会导致 vTaskDelayUntil 卡住
+
+            Serial.println("未解锁, 重置电机和IMU");
+            continue;
+        }
+
+        // 更新 IMU 数据
+        imu.update();
+        // 获取姿态角
+        imu.getPitchRollYaw(msAngle.pitch, msAngle.roll, msAngle.yaw);
+        // 获取角速度
+        imu.getGyrData(msRate.pitch, msRate.roll, msRate.yaw);
+        deltat = imu.getDeltat() * 1000; // ms
+
+        // 对于倒置的 IMU，将 pitch 和 roll 加减 180 度, roll 取反
+        msAngle.pitch = (msAngle.pitch > 0) ? (msAngle.pitch - 180) : (msAngle.pitch + 180);
+        msAngle.roll = -((msAngle.roll > 0) ? (msAngle.roll - 180) : (msAngle.roll + 180));
+
+        // 低通滤波
+        msAngle.pitch = lpf.filter(msAngle.pitch);
+        msAngle.roll = lpf.filter(msAngle.roll);
+        msAngle.yaw = lpf.filter(msAngle.yaw);
+
+        // 打印角度数据
+        Serial.printf("测量值: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n",
+                      msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
+
+        // PID 运算
+        pidRollAngle.Compute();
+        pidPitchAngle.Compute();
+        // pidYawAngle.Compute();
+        pidRollRate.Compute();
+        pidPitchRate.Compute();
+        pidYawRate.Compute();
+
+        // 打印 角度环 和 角速度环 输出
+        // Serial.printf("角度环: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n", 
+        //               tgRate.roll, tgRate.pitch, tgRate.yaw, deltat);
+        Serial.printf("角速度环: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n",
+                       outRate.roll, outRate.pitch, outRate.yaw, deltat);
+
+        // 推力控制
+        rc_thr = rc_thr + (ly * 0.02);        // 从摇杆控制推力
+        rc_thr = constrain(rc_thr, 0, 300);   // 推力限制
+
+        // 电机控制
+        int motor1 = rc_thr + outRate.roll - outRate.pitch - outRate.yaw;
+        int motor2 = rc_thr - outRate.roll - outRate.pitch + outRate.yaw;
+        int motor3 = rc_thr - outRate.roll + outRate.pitch - outRate.yaw;
+        int motor4 = rc_thr + outRate.roll + outRate.pitch + outRate.yaw;
+
+        // 限制电机推力范围
+        motor1 = constrain(motor1, 0, 1000);
+        motor2 = constrain(motor2, 0, 1000);
+        motor3 = constrain(motor3, 0, 1000);
+        motor4 = constrain(motor4, 0, 1000);
+
+        Serial.printf("motors: %d %d %d %d  rc_thr: %d\n", motor1, motor2, motor3, motor4, rc_thr);
+
+        motors.setMotorsThr(motor1, motor2, motor3, motor4); // 设置电机推力
+
+        // 修正 vTaskDelayUntil 的使用
+        if (xLastWakeTime == 0) {
+            xLastWakeTime = xTaskGetTickCount();
+            Serial.printf("Task delay: %d\n", xLastWakeTime);
+        }
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10)); // 10ms
+    }
+}
+
+
 void setup()
 {
     // 初始化串口
     Serial.begin(115200);
-    while (!Serial)
-    {
-    }
+    while (!Serial){} // 等待串口连接
     Serial.println("初始化串口成功...");
 
     // 初始化IMU
     if (!imu.begin())
     {
-        Serial.println("IMU initialization unsuccessful");
-        while (1)
-        {
-        }
+        Serial.println("等待 IMU 初始化...");
+        while (1){} // 等待 IMU 初始化
     }
-    imu.calculateGyrBias(500, 3); // 计算陀螺仪Z轴零偏
+    imu.calculateGyrBias(100, 3); // 计算陀螺仪Z轴零偏, 参数为采样次数
     Serial.println("初始化 ICM4268 成功...");
 
     // 初始化NOW
@@ -90,76 +220,31 @@ void setup()
 
     // 初始化电机
     motors.reset(); // 重置电机
+
+    // 创建遥控数据处理任务
+    xTaskCreate(
+        remoteDataTask,   // 任务函数
+        "RemoteData",     // 任务名称
+        2048,             // 任务堆栈大小
+        NULL,             // 传递给任务的参数
+        1,                // 任务优先级
+        NULL              // 任务句柄
+    );
+
+    // 创建 IMU 控制任务
+    xTaskCreate(
+        imuControlTask,   // 任务函数
+        "IMUControl",     // 任务名称
+        4096,             // 任务堆栈大小
+        NULL,             // 传递给任务的参数
+        31,               // 任务优先级 最高级
+        NULL              // 任务句柄
+    );
 }
 
-static TickType_t xLastWakeTime = 0; // 用于 vTaskDelayUntil 的变量
 void loop()
 {
-    int* parsedData = receiver.getParsedDataFix();
-    int parsedDataSize = receiver.getParsedDataSize();
-    const uint8_t* lastMacAddr = receiver.getLastMacAddr();
-
-    // 打印解析后的数据
-    Serial.print("now Data: ");
-    for (int i = 0; i < parsedDataSize; i++) {
-        Serial.print(parsedData[i]);
-        Serial.print(" ");
-    }
-    Serial.println();
-
-    imu.update();
-
-    // 显示数据
-    // Serial.printf("AccX: %f\t AccY: %f\t AccZ: %f\t GyrX: %f\t GyrY: %f\t GyrZ: %f\t Temp: %f\n",
-    //              ax, ay, az, gx, gy, gz, temp);
-
-    imu.getPitchRollYaw(msAngle.pitch, msAngle.roll, msAngle.yaw); // 获取姿态角
-    imu.getGyrData(msRate.pitch, msRate.roll, msRate.yaw);         // 获取角速度
-    deltat = imu.getDeltat() * 1000;                               // ms
-
-    // 对于倒置的IMU，将pitch和roll加减180度, roll 取反
-    msAngle.pitch = (msAngle.pitch > 0) ? (msAngle.pitch - 180) : (msAngle.pitch + 180);
-    msAngle.roll = -((msAngle.roll > 0) ? (msAngle.roll - 180) : (msAngle.roll + 180));
-
-    // 低通滤波
-    msAngle.pitch = lpf.filter(msAngle.pitch);
-    msAngle.roll  = lpf.filter(msAngle.roll);
-    msAngle.yaw   = lpf.filter(msAngle.yaw);
-
-    // Serial.printf("rate: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", 
-    //              msRate.roll, msRate.pitch, msRate.yaw, deltat);
-    Serial.printf("angle: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n",
-                  msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
-
-    // PID 运算
-    pidRollAngle.Compute();
-    pidPitchAngle.Compute();
-    // pidYawAngle.Compute();
-    pidRollRate.Compute();
-    pidPitchRate.Compute();
-    pidYawRate.Compute();
-
-    // PID 输出
-    Serial.printf(" tgRate: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n", 
-                    tgRate.roll, tgRate.pitch, tgRate.yaw, deltat);
-    // Serial.printf("outRate: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.2f ms \n", 
-    //              outRate.roll, outRate.pitch, outRate.yaw, deltat);
-    
-    // 电机控制
-    int rc_thr = 100;
-    int motor1 = rc_thr + outRate.roll - outRate.pitch - outRate.yaw;
-    int motor2 = rc_thr - outRate.roll - outRate.pitch + outRate.yaw;
-    int motor3 = rc_thr - outRate.roll + outRate.pitch - outRate.yaw;
-    int motor4 = rc_thr + outRate.roll + outRate.pitch + outRate.yaw;
-
-    Serial.printf("motors: %d %d %d %d  rc_thr: %d\n", motor1, motor2, motor3, motor4, rc_thr);
-
-    motors.setMotorsThr(motor1, motor2, motor3, motor4); // 设置电机推力
-
-
-    if (xLastWakeTime == 0)  // 修正 vTaskDelayUntil 的使用
-    {
-        xLastWakeTime = xTaskGetTickCount();
-    }
-    vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10)); // 10ms
+    // 任务延时
 }
+
+
