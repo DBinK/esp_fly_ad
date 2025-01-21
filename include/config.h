@@ -60,3 +60,17 @@ typedef struct {
 } OutRate;            // 输出角速度控制量
 
 #endif // CONFIG_H
+
+// void getData(int &data){
+//     data = 10;
+// }
+
+// void getData(int* data){
+//     _data = data;
+//     *data = 10;
+// }
+
+// void getData(int *data){
+//     _data = data;
+//     *data = 10;
+// }
