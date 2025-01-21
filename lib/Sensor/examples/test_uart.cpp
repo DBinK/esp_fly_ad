@@ -1,4 +1,13 @@
 #include <Arduino.h>
+#include <QuickPID.h>
+
+#include "imu.h"
+#include "now.h"
+#include "motors.h"
+#include "config.h"
+#include "utility.h"
+
+#include <Arduino.h>
 #include "uart.h"
 
 // 创建 UART 对象
@@ -25,5 +34,5 @@ void loop() {
     Serial.printf("Current PID Parameters - kp: %f, ki: %f, kd: %f\n", kp, ki, kd);
 
     // 延迟一段时间
-    delay(1000);
+    delay(500);
 }

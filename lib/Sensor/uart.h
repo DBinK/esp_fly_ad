@@ -14,7 +14,7 @@ public:
     float value;
 
 private:
-    HardwareSerial* _serial;
+    USBCDC* _serial;
 };
 
 #endif
