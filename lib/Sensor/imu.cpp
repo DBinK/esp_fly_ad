@@ -120,7 +120,7 @@ void IMUClass::calculateGyrBias(int numSamples, int sec)
     for (int i = 0; i < numSamples; ++i)
     {
         update();
-        Serial.printf("measuring gyrX: %f, gyrY: %f, gyrZ: %f \n", gyrX, gyrY, gyrZ);
+        Serial.printf("measuring... gyrX = %f, gyrY = %f, gyrZ = %f \n", gyrX, gyrY, gyrZ);
         sumX += gyrX;
         sumY += gyrY;
         sumZ += gyrZ;
@@ -131,9 +131,9 @@ void IMUClass::calculateGyrBias(int numSamples, int sec)
     gyrYBias = sumY / numSamples;
     gyrZBias = sumZ / numSamples;
 
-    Serial.printf("gyrX Bias: %f \n", gyrXBias);
-    Serial.printf("gyrY Bias: %f \n", gyrYBias);
-    Serial.printf("gyrZ Bias: %f \n", gyrZBias);
+    Serial.printf("gyrX Bias = %f \n", gyrXBias);
+    Serial.printf("gyrY Bias = %f \n", gyrYBias);
+    Serial.printf("gyrZ Bias = %f \n", gyrZBias);
 
     delay(sec*1000); // 等待3秒以查看零漂值
 }

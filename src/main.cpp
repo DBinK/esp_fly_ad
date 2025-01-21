@@ -47,7 +47,8 @@ QuickPID pidPitchRate(&msRate.pitch, &outRate.pitch, &tgRate.pitch,
 QuickPID pidYawRate(&msRate.yaw, &outRate.yaw, &tgRate.yaw,
                     YAW_RATE_P, YAW_RATE_I, YAW_RATE_D, QuickPID::Action::direct);
 
-LowPassFilter lpf(0.9);  // 低通滤波器, 参数越小, 滤波效果越好, 响应时间越慢
+LowPassFilter msAngle_roll(0.1);  // 低通滤波器, 参数越小, 滤波效果越好, 响应时间越慢
+LowPassFilter msAngle_pitch(0.1);
 
 
 // 任务函数定义
@@ -90,8 +91,9 @@ void remoteDataTask(void *parameter) {
         //     Serial.print(parsedData[i]);
         //     Serial.print(" ");
         // }
-        // Serial.println("\r\n");
-        Serial.printf("lx: %d, ly: %d, rx: %d, ry: %d \r\n", lx, ly, rx, ry);
+        // Serial.println("\n");
+
+        // Serial.printf("lx: %d, ly: %d, rx: %d, ry: %d \n", lx, ly, rx, ry);
 
         // 延时一段时间再进行下一次数据处理
         delay(20); // 延时
@@ -127,11 +129,15 @@ void imuControlTask(void *parameter) {
         msAngle.roll = -((msAngle.roll > 0) ? (msAngle.roll - 180) : (msAngle.roll + 180));
 
         // 低通滤波
-        msAngle.roll = lpf.filter(msAngle.roll);
+        msAngle.roll = msAngle_roll.filter(msAngle.roll);
+        msAngle.pitch = msAngle_pitch.filter(msAngle.pitch);
 
+        // // 打印角度数据
+        // Serial.printf(">msAngle_Roll: %.2f, msAngle_Pitch: %.2f, msAngle_Yaw:%.2f, deltat_ms: %.6f\n",
+        //               msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
         // 打印角度数据
-        Serial.printf(">msAngle_Roll: %.2f, msAngle_Pitch: %.2f, msAngle_Yaw:%.2f, deltat_ms: %.6f\r\n",
-                      msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
+        // Serial.printf("msAngle: %.2f, %.2f, %.2f, %.6f\n",
+        //               msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
 
         // 摔倒检测
         if (abs(msAngle.roll) > 80 || abs(msAngle.pitch) > 90) {
@@ -149,10 +155,14 @@ void imuControlTask(void *parameter) {
         pidYawRate.Compute();
 
         // 打印 角度环 和 角速度环 输出
-        // Serial.printf("角度环: Roll: %.2f, Pitch: %.2f, Yaw: %.2f, deltat: %.6f ms \r\n", 
+        // Serial.printf("角度环: Roll: %.2f, Pitch: %.2f, Yaw: %.2f, deltat: %.6f ms \n", 
         //               tgRate.roll, tgRate.pitch, tgRate.yaw, deltat);
-        Serial.printf(">outRate_roll: %.2f, outRate_pitch: %.2f, outRate_yaw: %.2f, deltat_ms: %.6f \r\n",
-                       outRate.roll, outRate.pitch, outRate.yaw, deltat);
+        // Serial.printf("outRate: %.2f, %.2f, %.2f, %.6f \n",
+        //                outRate.roll, outRate.pitch, outRate.yaw, deltat);
+
+        // VOFA+ 调试输出
+        Serial.printf("%.2f, %.2f, %.2f, %.6f, %.2f, %.2f, %.2f\n",
+                msAngle.roll, msAngle.pitch, msAngle.yaw, deltat, outRate.roll, outRate.pitch, outRate.yaw);
 
         // 推力控制
         rc_thr = rc_thr + (ly * 0.02);        // 从摇杆控制推力
@@ -170,8 +180,8 @@ void imuControlTask(void *parameter) {
         motor3 = constrain(motor3, 0, 1000);  // 右后 不对
         motor4 = constrain(motor4, 0, 1000);  // 右前
 
-        Serial.printf("motors: %.2f %.2f %.2f %.2f  rc_thr: %.2f\r\n", 
-                        motor1, motor2, motor3, motor4, rc_thr);
+        // Serial.printf("motors: %.2f %.2f %.2f %.2f  rc_thr: %.2f\n", 
+        //                 motor1, motor2, motor3, motor4, rc_thr);
 
         // 检查是否准备好
         if (isReady) {
@@ -187,7 +197,7 @@ void imuControlTask(void *parameter) {
 
             // xLastWakeTime = 0; // 重置时间, 不然会导致 vTaskDelayUntil 卡住
 
-            Serial.println("未解锁, 重置电机和IMU");
+            Serial.println("未解锁, 重置电机");
         }
 
 

@@ -1,7 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include <Arduino.h>
 
 // 角度环数据PID参数
 float ROL_ANGLE_P = 0;
@@ -17,7 +16,7 @@ float YAW_ANGLE_I = 0;
 float YAW_ANGLE_D = 0;
 
 // 角速度环数据PID参数
-float ROL_RATE_P = 3;
+float ROL_RATE_P = 2.7;
 float ROL_RATE_I = 0;
 float ROL_RATE_D = 0;
 
