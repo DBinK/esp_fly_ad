@@ -26,7 +26,7 @@ String UART::readLine() {
     return "";  // 返回空字符串
 }
 
-void UART::UpdatePidParams(float &kp, float &ki, float &kd) {
+bool UART::UpdatePidParams(float &kp, float &ki, float &kd) {
     int startIndex = 0;
     int endIndex = 0;
 
@@ -54,19 +54,23 @@ void UART::UpdatePidParams(float &kp, float &ki, float &kd) {
         valueStr.trim(); // 调用 trim() 方法
         value = valueStr.toFloat();
 
-        // 根据 key 更新 pid 参数
-        if (key == "kp") {
-            kp = value;
-        } else if (key == "ki") {
-            ki = value;
-        } else if (key == "kd") {
-            kd = value;
-        }
-
         // 打印解析后的数据
         _serial->printf("Key: %s, Value: %f\n", key.c_str(), value);
 
         // 更新起始位置
         startIndex++;
+
+        // 根据 key 更新 pid 参数
+        if (key == "kp") {
+            kp = value;
+            return true;
+        } else if (key == "ki") {
+            ki = value;
+            return true;
+        } else if (key == "kd") {
+            kd = value;
+            return true;
+        }
     }
+    return false;
 }

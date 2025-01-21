@@ -7,7 +7,7 @@ class UART {
 public:
     void begin(USBCDC &serial, long baudRate = 115200);
     String readLine();
-    void UpdatePidParams(float &kp, float &ki, float &kd);
+    bool UpdatePidParams(float &kp, float &ki, float &kd);
     String receivedData;
     String key;
     String valueStr;

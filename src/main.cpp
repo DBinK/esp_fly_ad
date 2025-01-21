@@ -1,9 +1,13 @@
+// 标准库
 #include <Arduino.h>
 #include <QuickPID.h>
 
+// 自定义库
 #include "imu.h"
 #include "now.h"
 #include "motors.h"
+#include "uart.h"
+
 #include "config.h"
 #include "utility.h"
 
@@ -49,6 +53,9 @@ QuickPID pidYawRate(&msRate.yaw, &outRate.yaw, &tgRate.yaw,
 
 LowPassFilter msAngle_roll(0.1);  // 低通滤波器, 参数越小, 滤波效果越好, 响应时间越慢
 LowPassFilter msAngle_pitch(0.1);
+
+UART pid_config;   // 串口增强类, 用于 vofa+ 调试 PID 参数
+
 
 
 // 任务函数定义
@@ -140,11 +147,29 @@ void imuControlTask(void *parameter) {
         //               msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
 
         // 摔倒检测
-        if (abs(msAngle.roll) > 80 || abs(msAngle.pitch) > 90) {
+        if (abs(msAngle.roll) > 60 || abs(msAngle.pitch) > 60) {
             isReady = false;
             motors.reset(); 
             Serial.println("检测到摔倒, 紧急停止...");
         }
+
+        // 更新 pidRollRate PID 参数
+        // if (pid_config.UpdatePidParams(ROL_RATE_P, ROL_RATE_I, ROL_RATE_D))
+        // {
+        //     pidRollRate.SetTunings(ROL_RATE_P, ROL_RATE_I, ROL_RATE_D);
+        //     Serial.println("PID参数更新成功");
+        // }
+        // Serial.printf("当前PID参数: ROL_RATE_P: %.2f, ROL_RATE_I: %.2f, ROL_RATE_D: %.2f\n",
+        //                 ROL_RATE_P, ROL_RATE_I, ROL_RATE_D);
+
+        // 更新 pidRollAngle PID 参数
+        if (pid_config.UpdatePidParams(ROL_ANGLE_P, ROL_ANGLE_I, ROL_ANGLE_D))
+        {
+            pidRollAngle.SetTunings(ROL_ANGLE_P, ROL_ANGLE_I, ROL_ANGLE_D);
+            Serial.println("PID参数更新成功");
+        }
+        Serial.printf("当前PID参数: ROL_ANGLE_P: %.2f, ROL_ANGLE_I: %.2f, ROL_ANGLE_D: %.2f\n",
+                        ROL_ANGLE_P, ROL_ANGLE_I, ROL_ANGLE_D);
 
         // PID 运算
         pidRollAngle.Compute();
@@ -161,8 +186,10 @@ void imuControlTask(void *parameter) {
         //                outRate.roll, outRate.pitch, outRate.yaw, deltat);
 
         // VOFA+ 调试输出
-        Serial.printf("%.2f, %.2f, %.2f, %.6f, %.2f, %.2f, %.2f\n",
-                msAngle.roll, msAngle.pitch, msAngle.yaw, deltat, outRate.roll, outRate.pitch, outRate.yaw);
+        Serial.printf("%.2f, %.2f, %.2f, %.6f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f\n",
+                msAngle.roll, msAngle.pitch, msAngle.yaw, deltat, 
+                tgRate.roll, tgRate.pitch, tgRate.yaw,
+                outRate.roll, outRate.pitch, outRate.yaw);
 
         // 推力控制
         rc_thr = rc_thr + (ly * 0.02);        // 从摇杆控制推力
@@ -180,8 +207,8 @@ void imuControlTask(void *parameter) {
         motor3 = constrain(motor3, 0, 1000);  // 右后 不对
         motor4 = constrain(motor4, 0, 1000);  // 右前
 
-        // Serial.printf("motors: %.2f %.2f %.2f %.2f  rc_thr: %.2f\n", 
-        //                 motor1, motor2, motor3, motor4, rc_thr);
+        Serial.printf("motors: %.2f %.2f %.2f %.2f  rc_thr: %.2f\n", 
+                        motor1, motor2, motor3, motor4, rc_thr);
 
         // 检查是否准备好
         if (isReady) {
@@ -197,7 +224,7 @@ void imuControlTask(void *parameter) {
 
             // xLastWakeTime = 0; // 重置时间, 不然会导致 vTaskDelayUntil 卡住
 
-            Serial.println("未解锁, 重置电机");
+            Serial.println("未解锁, 重置电机..........................");
         }
 
 
@@ -210,6 +237,7 @@ void setup()
 
     // 初始化串口
     Serial.begin(115200);
+    pid_config.begin(Serial);  // 初始化串口增强类
 
     // while (!Serial){} // 等待串口连接
     Serial.println("初始化CDC串口成功...");
