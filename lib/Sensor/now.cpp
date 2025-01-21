@@ -32,7 +32,7 @@ void ESPNowReceiver::begin() {
     instance = this; // 设置实例指针
 
     pinMode(15, OUTPUT);  // 设置灯光输出引脚
-    digitalWrite(15, LOW);
+    digitalWrite(15, HIGH);
 
     // 初始化定时器
     timer = timerBegin(0, 80, true); // 使用定时器0，分频系数80，计数器向上计数
@@ -106,7 +106,7 @@ int* ESPNowReceiver::getParsedDataFix(){
                 digitalWrite(15, LOW);  // 灭灯
             }
             else { // 摇杆不在死区内, 闪烁灯光
-                digitalWrite(15, !digitalRead(15));
+                digitalWrite(15, HIGH);
             }
         }
         digitalWrite(15, LOW);  // 灭灯

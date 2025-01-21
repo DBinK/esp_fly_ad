@@ -7,6 +7,7 @@
 #include "config.h"
 #include "utility.h"
 
+
 // 创建数据结构体
 TargetAngle tgAngle;
 MeasureAngle msAngle;
@@ -40,13 +41,13 @@ QuickPID pidPitchAngle(&msAngle.pitch, &tgRate.pitch, &tgAngle.pitch,
 //                         YAW_ANGLE_P, YAW_ANGLE_I, YAW_ANGLE_D, QuickPID::Action::direct);
 
 QuickPID pidRollRate(&msRate.roll, &outRate.roll, &tgRate.roll,
-                     ROL_RATE_P, ROL_RATE_I, ROL_RATE_D, QuickPID::Action::direct);
+                     ROL_RATE_P, ROL_RATE_I, ROL_RATE_D, QuickPID::Action::reverse);
 QuickPID pidPitchRate(&msRate.pitch, &outRate.pitch, &tgRate.pitch,
                       PIT_RATE_P, PIT_RATE_I, PIT_RATE_D, QuickPID::Action::direct);
 QuickPID pidYawRate(&msRate.yaw, &outRate.yaw, &tgRate.yaw,
                     YAW_RATE_P, YAW_RATE_I, YAW_RATE_D, QuickPID::Action::direct);
 
-LowPassFilter lpf(0.7);  // 低通滤波器, 参数越小, 滤波效果越好, 响应时间越慢
+LowPassFilter lpf(0.9);  // 低通滤波器, 参数越小, 滤波效果越好, 响应时间越慢
 
 
 // 任务函数定义
@@ -76,6 +77,7 @@ void remoteDataTask(void *parameter) {
         if (!waitingForRelease && lx < -50 && ly < -50 && rx > 50 && ry < -50 && !isReady) {
             waitingForRelease = true;
             Serial.println("请松开按键以解锁...");
+            imu.begin();       // 重新初始化 IMU
         } else if (waitingForRelease && !(lx < -50 && ly < -50 && rx > 50 && ry < -50)) {
             waitingForRelease = false;
             isReady = true;
@@ -83,27 +85,34 @@ void remoteDataTask(void *parameter) {
         }
         
         // 打印解析后的数据
-        Serial.print("now Data: ");
-        for (int i = 0; i < parsedDataSize; i++) {
-            Serial.print(parsedData[i]);
-            Serial.print(" ");
-        }
-        Serial.println("\n");
+        // Serial.print("now Data: ");
+        // for (int i = 0; i < parsedDataSize; i++) {
+        //     Serial.print(parsedData[i]);
+        //     Serial.print(" ");
+        // }
+        // Serial.println("\n");
+        Serial.printf("lx: %d\t ly: %d\t rx: %d\t ry: %d \n", lx, ly, rx, ry);
 
         // 延时一段时间再进行下一次数据处理
-        vTaskDelay(pdMS_TO_TICKS(10)); // 延时
+        delay(20); // 延时
     }
 }
 
-static TickType_t xLastWakeTime = 0; // 用于 vTaskDelayUntil 的变量
 void imuControlTask(void *parameter) {
 
     float motor1 = 0;
     float motor2 = 0;
     float motor3 = 0;
     float motor4 = 0;
+    
+    static TickType_t xLastWakeTime = 0; // 用于 vTaskDelayUntil 的变量
 
     while (1) {
+        // 修正 vTaskDelayUntil 的使用
+        if (xLastWakeTime == 0) {
+            xLastWakeTime = xTaskGetTickCount();
+        }
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10)); // 10ms
 
         // 更新 IMU 数据
         imu.update();
@@ -118,16 +127,14 @@ void imuControlTask(void *parameter) {
         msAngle.roll = -((msAngle.roll > 0) ? (msAngle.roll - 180) : (msAngle.roll + 180));
 
         // 低通滤波
-        msAngle.pitch = lpf.filter(msAngle.pitch);
         msAngle.roll = lpf.filter(msAngle.roll);
-        msAngle.yaw = lpf.filter(msAngle.yaw);
 
         // 打印角度数据
         Serial.printf("测量值: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n",
                       msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
 
         // 摔倒检测
-        if (abs(msAngle.roll) > 30 || abs(msAngle.pitch) > 30) {
+        if (abs(msAngle.roll) > 60 || abs(msAngle.pitch) > 60) {
             isReady = false;
             motors.reset(); 
             Serial.println("检测到摔倒, 紧急停止...");
@@ -149,17 +156,13 @@ void imuControlTask(void *parameter) {
 
         // 推力控制
         rc_thr = rc_thr + (ly * 0.02);        // 从摇杆控制推力
-        rc_thr = constrain(rc_thr, 0, 300);   // 推力限制
+        rc_thr = constrain(rc_thr, 0, 400);   // 推力限制
 
         // 电机控制
         motor1 = rc_thr + outRate.roll - outRate.pitch - outRate.yaw;
         motor2 = rc_thr - outRate.roll - outRate.pitch + outRate.yaw;
         motor3 = rc_thr - outRate.roll + outRate.pitch - outRate.yaw;
         motor4 = rc_thr + outRate.roll + outRate.pitch + outRate.yaw;
-
-        motor2 = motor2 + (ry * 0.02);  // 测试用
-        motor3 = motor3 + (rx * 0.02);
-        motor4 = motor4 + (lx * 0.02);
 
         // 限制电机推力范围
         motor1 = constrain(motor1, 0, 1000);  // 左前
@@ -177,11 +180,9 @@ void imuControlTask(void *parameter) {
 
         } else {
             // 未准备好, 重置电机和IMU
-            // delay(10);       // 延时 1s
 
             motors.reset();    // 重置电机
-            imu.begin();       // 重新初始化 IMU
-
+            
             rc_thr = 0;        // 重置推力
 
             // xLastWakeTime = 0; // 重置时间, 不然会导致 vTaskDelayUntil 卡住
@@ -190,21 +191,18 @@ void imuControlTask(void *parameter) {
         }
 
 
-        // 修正 vTaskDelayUntil 的使用
-        if (xLastWakeTime == 0) {
-            xLastWakeTime = xTaskGetTickCount();
-        }
-        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10)); // 10ms
     }
 }
 
 
 void setup()
 {
+
     // 初始化串口
     Serial.begin(115200);
-    while (!Serial){} // 等待串口连接
-    Serial.println("初始化串口成功...");
+
+    // while (!Serial){} // 等待串口连接
+    Serial.println("初始化CDC串口成功...");
 
     // 初始化IMU
     if (!imu.begin())
@@ -258,7 +256,7 @@ void setup()
         "IMUControl",     // 任务名称
         4096,             // 任务堆栈大小
         NULL,             // 传递给任务的参数
-        31,               // 任务优先级 最高级
+        5,               // 任务优先级 最高级
         NULL              // 任务句柄
     );
 }

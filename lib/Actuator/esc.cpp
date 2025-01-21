@@ -50,7 +50,7 @@ void ESCController::setThrRelative(int relative_thr) {
 
 void ESCController::reset(int target_thr) {
     this->setThr(target_thr);
-    Serial.println("reset(): 复位电机");
+    // Serial.println("reset(): 复位电机");
 }
 
 void ESCController::setPWM(int us) {

@@ -24,6 +24,11 @@ float LowPassFilter::filter(float input)
     return filteredValue;
 }
 
+void LowPassFilter::reset(float initialValue)
+{
+    filteredValue = initialValue;
+}
+
 // 滑动平均滤波器类
 MovingAverageFilter::MovingAverageFilter(int windowSize) : windowSize(windowSize), bufferIndex(0), sum(0.0)
 {

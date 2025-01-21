@@ -18,6 +18,7 @@ public:
     LowPassFilter(float alpha) : alpha(alpha), filteredValue(0.0) {}
     void setAlpha(float alpha);
     float filter(float input);
+    void reset(float initialValue = 0.0);
 
 private:
     float alpha;         // 滤波器系数，范围 0 到 1
