@@ -90,8 +90,8 @@ void remoteDataTask(void *parameter) {
         //     Serial.print(parsedData[i]);
         //     Serial.print(" ");
         // }
-        // Serial.println("\n");
-        Serial.printf("lx: %d\t ly: %d\t rx: %d\t ry: %d \n", lx, ly, rx, ry);
+        // Serial.println("\r\n");
+        Serial.printf("lx: %d, ly: %d, rx: %d, ry: %d \r\n", lx, ly, rx, ry);
 
         // 延时一段时间再进行下一次数据处理
         delay(20); // 延时
@@ -130,11 +130,11 @@ void imuControlTask(void *parameter) {
         msAngle.roll = lpf.filter(msAngle.roll);
 
         // 打印角度数据
-        Serial.printf("测量值: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n",
+        Serial.printf(">msAngle_Roll: %.2f, msAngle_Pitch: %.2f, msAngle_Yaw:%.2f, deltat_ms: %.6f\r\n",
                       msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
 
         // 摔倒检测
-        if (abs(msAngle.roll) > 60 || abs(msAngle.pitch) > 60) {
+        if (abs(msAngle.roll) > 80 || abs(msAngle.pitch) > 90) {
             isReady = false;
             motors.reset(); 
             Serial.println("检测到摔倒, 紧急停止...");
@@ -149,9 +149,9 @@ void imuControlTask(void *parameter) {
         pidYawRate.Compute();
 
         // 打印 角度环 和 角速度环 输出
-        // Serial.printf("角度环: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n", 
+        // Serial.printf("角度环: Roll: %.2f, Pitch: %.2f, Yaw: %.2f, deltat: %.6f ms \r\n", 
         //               tgRate.roll, tgRate.pitch, tgRate.yaw, deltat);
-        Serial.printf("角速度环: Roll: %.2f\t Pitch: %.2f\t Yaw: %.2f\t deltat: %.6f ms \n",
+        Serial.printf(">outRate_roll: %.2f, outRate_pitch: %.2f, outRate_yaw: %.2f, deltat_ms: %.6f \r\n",
                        outRate.roll, outRate.pitch, outRate.yaw, deltat);
 
         // 推力控制
@@ -170,7 +170,7 @@ void imuControlTask(void *parameter) {
         motor3 = constrain(motor3, 0, 1000);  // 右后 不对
         motor4 = constrain(motor4, 0, 1000);  // 右前
 
-        Serial.printf("motors: %.2f %.2f %.2f %.2f  rc_thr: %.2f\n", 
+        Serial.printf("motors: %.2f %.2f %.2f %.2f  rc_thr: %.2f\r\n", 
                         motor1, motor2, motor3, motor4, rc_thr);
 
         // 检查是否准备好
