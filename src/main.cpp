@@ -90,11 +90,19 @@ void remoteDataTask(void *parameter) {
         if (!waitingForRelease && lx < -50 && ly < -50 && rx > 50 && ry < -50 && !isReady) {
             waitingForRelease = true;
             Serial.println("请松开按键以解锁...");
-            // imu.begin();       // 重新初始化 IMU
         } else if (waitingForRelease && !(lx < -50 && ly < -50 && rx > 50 && ry < -50)) {
             waitingForRelease = false;
             isReady = true;
             Serial.println("已解锁");
+
+            // 重置 PID, 防止积分误差累积
+            pidRollAngle.Reset();
+            pidPitchAngle.Reset();
+            // pidYawAngle.Reset();
+
+            pidRollRate.Reset();
+            pidPitchRate.Reset();
+            pidYawRate.Reset();
         }
         
         // 打印解析后的数据
@@ -144,9 +152,9 @@ void imuControlTask(void *parameter) {
         msAngle.roll  = msAngle_roll.filter(msAngle.roll);
         msAngle.pitch = msAngle_pitch.filter(msAngle.pitch);
 
-        msRate.roll  = msRate_roll.filter(msRate.roll);
-        msRate.pitch = msRate_pitch.filter(msRate.pitch);
-        msRate.yaw   = msRate_yaw.filter(msRate.yaw);
+        // msRate.roll  = msRate_roll.filter(msRate.roll);
+        // msRate.pitch = msRate_pitch.filter(msRate.pitch);
+        // msRate.yaw   = msRate_yaw.filter(msRate.yaw);
         
         // // 打印角度数据
         // Serial.printf(">msAngle_Roll: %.2f, msAngle_Pitch: %.2f, msAngle_Yaw:%.2f, deltat_ms: %.6f\n",
@@ -156,10 +164,10 @@ void imuControlTask(void *parameter) {
         //               msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
 
         // 摔倒, 快速翻转检测
-        if (abs(msAngle.roll)  > 60  ||
+        if (abs(msAngle.roll)  > 70  ||
             abs(msAngle.pitch) > 60  ||
             abs(msRate.roll)   > 300 ||
-            abs(msRate.pitch)  > 300)
+            abs(msRate.pitch)  > 300 )
         {
             motors.reset(); // 重置电机
             isReady = false;
@@ -172,6 +180,10 @@ void imuControlTask(void *parameter) {
         {
             pidRollAngle.SetTunings(ROL_ANGLE_P, ROL_ANGLE_I, ROL_ANGLE_D);
             pidRollRate.SetTunings(ROL_RATE_P, ROL_RATE_I, ROL_RATE_D);
+
+            pidRollAngle.Reset();
+            pidRollRate.Reset();
+            
             Serial.println("PID参数更新成功");
         }
         Serial.printf("当前 angle_PID 参数, ANGLE_P = %f, ANGLE_I = %f, ANGLE_D = %f\n",
@@ -202,7 +214,7 @@ void imuControlTask(void *parameter) {
 
         // 推力控制
         rc_thr = rc_thr + (ly * 0.03);        // 从摇杆控制推力
-        rc_thr = constrain(rc_thr, 0, 450);   // 推力限制
+        rc_thr = constrain(rc_thr, 0, 650);   // 推力限制
 
         // 电机控制
         motor1 = rc_thr + outRate.roll - outRate.pitch - outRate.yaw;
@@ -223,15 +235,14 @@ void imuControlTask(void *parameter) {
         if (isReady) {
             // 准备好的话, 发送电机控制指令
             motors.setMotorsThr(motor1, motor2, motor3, motor4); // 设置电机推力
+            digitalWrite(15, !digitalRead(15));
 
         } else {
             // 未准备好, 重置电机和IMU
-
+            digitalWrite(15, LOW);
             motors.reset();    // 重置电机
             
             rc_thr = 0;        // 重置推力
-
-            // xLastWakeTime = 0; // 重置时间, 不然会导致 vTaskDelayUntil 卡住
 
             Serial.println("未解锁, 重置电机..........................");
         }
@@ -243,6 +254,9 @@ void imuControlTask(void *parameter) {
 
 void setup()
 {
+    // 设置灯光输出引脚
+    pinMode(15, OUTPUT);  
+    digitalWrite(15, HIGH);
 
     // 初始化串口
     Serial.begin(115200);

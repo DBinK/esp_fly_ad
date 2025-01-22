@@ -3,26 +3,26 @@
 
 
 // 角度环数据PID参数
-float ROL_ANGLE_P = 1.3;
-float ROL_ANGLE_I = 0.00001;
-float ROL_ANGLE_D = 0.005;
+float ROL_ANGLE_P = 2.5;   
+float ROL_ANGLE_I = 0.0001; 
+float ROL_ANGLE_D = 0.1448;  
 
-float PIT_ANGLE_P = 0;
-float PIT_ANGLE_I = 0;
-float PIT_ANGLE_D = 0;
+float PIT_ANGLE_P = ROL_ANGLE_P;
+float PIT_ANGLE_I = ROL_ANGLE_I;
+float PIT_ANGLE_D = ROL_ANGLE_D;
 
 float YAW_ANGLE_P = 0;
 float YAW_ANGLE_I = 0;
 float YAW_ANGLE_D = 0;
 
 // 角速度环数据PID参数
-float ROL_RATE_P = 2.8;
-float ROL_RATE_I = 0.00001;
-float ROL_RATE_D = 0.015;
+float ROL_RATE_P = 1.24;
+float ROL_RATE_I = 0.15233;
+float ROL_RATE_D = 0.07;
 
-float PIT_RATE_P = 0;
-float PIT_RATE_I = 0;
-float PIT_RATE_D = 0;
+float PIT_RATE_P = ROL_RATE_P;
+float PIT_RATE_I = ROL_RATE_I;
+float PIT_RATE_D = ROL_RATE_D;
 
 float YAW_RATE_P = 0;
 float YAW_RATE_I = 0;

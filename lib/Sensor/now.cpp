@@ -31,9 +31,6 @@ void ESPNowReceiver::begin() {
     ESPNow.reg_recv_cb(onReceiveStatic); // 注册静态成员函数作为回调
     instance = this; // 设置实例指针
 
-    pinMode(15, OUTPUT);  // 设置灯光输出引脚
-    digitalWrite(15, HIGH);
-
     // 初始化定时器
     timer = timerBegin(0, 80, true); // 使用定时器0，分频系数80，计数器向上计数
     timerAttachInterrupt(timer, &ESPNowReceiver::timerCallback, true); // 将回调函数附加到定时器
@@ -103,13 +100,8 @@ int* ESPNowReceiver::getParsedDataFix(){
         for (int i = 1; i < 5; i++) {
             if (abs(parsedDataFix[i]) < DEAD_AREA) {
                 parsedDataFix[i] = 0;
-                digitalWrite(15, LOW);  // 灭灯
-            }
-            else { // 摇杆不在死区内, 闪烁灯光
-                digitalWrite(15, HIGH);
             }
         }
-        digitalWrite(15, LOW);  // 灭灯
     }
     return parsedDataFix;
 }
