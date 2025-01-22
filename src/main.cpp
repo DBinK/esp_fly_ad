@@ -53,6 +53,11 @@ QuickPID pidYawRate(&msRate.yaw, &outRate.yaw, &tgRate.yaw,
 
 LowPassFilter msAngle_roll(0.1);  // 低通滤波器, 参数越小, 滤波效果越好, 响应时间越慢
 LowPassFilter msAngle_pitch(0.1);
+LowPassFilter msAngle_yaw(0.1);
+
+LowPassFilter msRate_roll(0.1);
+LowPassFilter msRate_pitch(0.5);
+LowPassFilter msRate_yaw(0.9);
 
 UART pid_config;   // 串口增强类, 用于 vofa+ 调试 PID 参数
 
@@ -85,7 +90,7 @@ void remoteDataTask(void *parameter) {
         if (!waitingForRelease && lx < -50 && ly < -50 && rx > 50 && ry < -50 && !isReady) {
             waitingForRelease = true;
             Serial.println("请松开按键以解锁...");
-            imu.begin();       // 重新初始化 IMU
+            // imu.begin();       // 重新初始化 IMU
         } else if (waitingForRelease && !(lx < -50 && ly < -50 && rx > 50 && ry < -50)) {
             waitingForRelease = false;
             isReady = true;
@@ -132,13 +137,17 @@ void imuControlTask(void *parameter) {
         deltat = imu.getDeltat() * 1000; // ms
 
         // 对于倒置的 IMU，将 pitch 和 roll 加减 180 度, roll 取反
-        msAngle.pitch = (msAngle.pitch > 0) ? (msAngle.pitch - 180) : (msAngle.pitch + 180);
-        msAngle.roll = -((msAngle.roll > 0) ? (msAngle.roll - 180) : (msAngle.roll + 180));
+        msAngle.pitch =   (msAngle.pitch > 0) ? (msAngle.pitch - 180) : (msAngle.pitch + 180);
+        msAngle.roll  = -((msAngle.roll > 0) ? (msAngle.roll - 180) : (msAngle.roll + 180));
 
         // 低通滤波
-        msAngle.roll = msAngle_roll.filter(msAngle.roll);
+        msAngle.roll  = msAngle_roll.filter(msAngle.roll);
         msAngle.pitch = msAngle_pitch.filter(msAngle.pitch);
 
+        msRate.roll  = msRate_roll.filter(msRate.roll);
+        msRate.pitch = msRate_pitch.filter(msRate.pitch);
+        msRate.yaw   = msRate_yaw.filter(msRate.yaw);
+        
         // // 打印角度数据
         // Serial.printf(">msAngle_Roll: %.2f, msAngle_Pitch: %.2f, msAngle_Yaw:%.2f, deltat_ms: %.6f\n",
         //               msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
@@ -146,30 +155,29 @@ void imuControlTask(void *parameter) {
         // Serial.printf("msAngle: %.2f, %.2f, %.2f, %.6f\n",
         //               msAngle.roll, msAngle.pitch, msAngle.yaw, deltat);
 
-        // 摔倒检测
-        if (abs(msAngle.roll) > 60 || abs(msAngle.pitch) > 60) {
+        // 摔倒, 快速翻转检测
+        if (abs(msAngle.roll)  > 60  ||
+            abs(msAngle.pitch) > 60  ||
+            abs(msRate.roll)   > 300 ||
+            abs(msRate.pitch)  > 300)
+        {
+            motors.reset(); // 重置电机
             isReady = false;
-            motors.reset(); 
             Serial.println("检测到摔倒, 紧急停止...");
         }
 
-        // 更新 pidRollRate PID 参数
-        // if (pid_config.UpdatePidParams(ROL_RATE_P, ROL_RATE_I, ROL_RATE_D))
-        // {
-        //     pidRollRate.SetTunings(ROL_RATE_P, ROL_RATE_I, ROL_RATE_D);
-        //     Serial.println("PID参数更新成功");
-        // }
-        // Serial.printf("当前PID参数: ROL_RATE_P: %.2f, ROL_RATE_I: %.2f, ROL_RATE_D: %.2f\n",
-        //                 ROL_RATE_P, ROL_RATE_I, ROL_RATE_D);
-
-        // 更新 pidRollAngle PID 参数
-        if (pid_config.UpdatePidParams(ROL_ANGLE_P, ROL_ANGLE_I, ROL_ANGLE_D))
+        // 更新 PID 参数
+        if (pid_config.UpdatePidParams(ROL_ANGLE_P, ROL_ANGLE_I, ROL_ANGLE_D,
+                                       ROL_RATE_P, ROL_RATE_I, ROL_RATE_D))
         {
             pidRollAngle.SetTunings(ROL_ANGLE_P, ROL_ANGLE_I, ROL_ANGLE_D);
+            pidRollRate.SetTunings(ROL_RATE_P, ROL_RATE_I, ROL_RATE_D);
             Serial.println("PID参数更新成功");
         }
-        Serial.printf("当前PID参数: ROL_ANGLE_P: %.2f, ROL_ANGLE_I: %.2f, ROL_ANGLE_D: %.2f\n",
-                        ROL_ANGLE_P, ROL_ANGLE_I, ROL_ANGLE_D);
+        Serial.printf("当前 angle_PID 参数, ANGLE_P = %f, ANGLE_I = %f, ANGLE_D = %f\n",
+                      ROL_ANGLE_P, ROL_ANGLE_I, ROL_ANGLE_D);
+        Serial.printf("当前 rate_PID 参数: RATE_P: %f, RATE_I: %f, RATE_D: %f\n",
+                      ROL_RATE_P, ROL_RATE_I, ROL_RATE_D);
 
         // PID 运算
         pidRollAngle.Compute();
@@ -186,13 +194,14 @@ void imuControlTask(void *parameter) {
         //                outRate.roll, outRate.pitch, outRate.yaw, deltat);
 
         // VOFA+ 调试输出
-        Serial.printf("%.2f, %.2f, %.2f, %.6f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f\n",
-                msAngle.roll, msAngle.pitch, msAngle.yaw, deltat, 
+        Serial.printf("%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.6f\n",
+                msAngle.roll, msAngle.pitch, msAngle.yaw, 
                 tgRate.roll, tgRate.pitch, tgRate.yaw,
-                outRate.roll, outRate.pitch, outRate.yaw);
+                msRate.roll, msRate.pitch, msRate.yaw,
+                outRate.roll, outRate.pitch, outRate.yaw, deltat);
 
         // 推力控制
-        rc_thr = rc_thr + (ly * 0.02);        // 从摇杆控制推力
+        rc_thr = rc_thr + (ly * 0.03);        // 从摇杆控制推力
         rc_thr = constrain(rc_thr, 0, 400);   // 推力限制
 
         // 电机控制
@@ -207,7 +216,7 @@ void imuControlTask(void *parameter) {
         motor3 = constrain(motor3, 0, 1000);  // 右后 不对
         motor4 = constrain(motor4, 0, 1000);  // 右前
 
-        Serial.printf("motors: %.2f %.2f %.2f %.2f  rc_thr: %.2f\n", 
+        Serial.printf("motors= %.2f %.2f %.2f %.2f  rc_thr= %.2f\n", 
                         motor1, motor2, motor3, motor4, rc_thr);
 
         // 检查是否准备好
@@ -246,7 +255,7 @@ void setup()
     if (!imu.begin())
     {
         Serial.println("等待 IMU 初始化...");
-        while (1){} // 等待 IMU 初始化
+        while (!imu.begin()) {delay(100);} // 等待 IMU 初始化
     }
     imu.calculateGyrBias(100, 3); // 计算陀螺仪Z轴零偏, 参数为采样次数
     Serial.println("初始化 ICM4268 成功...");

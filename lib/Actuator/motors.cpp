@@ -60,5 +60,5 @@ void QuadMotorController::reset()
     {
         motors[i]->reset();
     }
-    Serial.println("reset(): 复位电机");
+    // Serial.println("reset(): 复位电机");
 }

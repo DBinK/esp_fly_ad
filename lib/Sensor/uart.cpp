@@ -26,7 +26,7 @@ String UART::readLine() {
     return "";  // 返回空字符串
 }
 
-bool UART::UpdatePidParams(float &kp, float &ki, float &kd) {
+bool UART::UpdatePidParams(float &kp, float &ki, float &kd, float &kp2, float &ki2, float &kd2) {
     int startIndex = 0;
     int endIndex = 0;
 
@@ -61,14 +61,23 @@ bool UART::UpdatePidParams(float &kp, float &ki, float &kd) {
         startIndex++;
 
         // 根据 key 更新 pid 参数
-        if (key == "kp") {
+        if (key == "angle_kp") {
             kp = value;
             return true;
-        } else if (key == "ki") {
+        } else if (key == "angle_ki") {
             ki = value;
             return true;
-        } else if (key == "kd") {
+        } else if (key == "angle_kd") {
             kd = value;
+            return true;
+        } else if (key == "rate_kp") {
+            kp2 = value;
+            return true;
+        } else if (key == "rate_ki") {
+            ki2 = value;
+            return true;
+        } else if (key == "rate_kd") {
+            kd2 = value;
             return true;
         }
     }
