@@ -59,8 +59,7 @@ LowPassFilter msRate_roll(0.7);
 LowPassFilter msRate_pitch(0.7);
 LowPassFilter msRate_yaw(0.7);
 
-UART pid_config;   // 串口增强类, 用于 vofa+ 调试 PID 参数
-
+UART pid_config;   // 串口增强类, 用于接收 vofa+ 调试 PID 参数
 
 
 // 任务函数定义
@@ -246,8 +245,6 @@ void imuControlTask(void *parameter) {
 
             Serial.println("未解锁, 重置电机..........................");
         }
-
-
     }
 }
 

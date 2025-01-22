@@ -3,9 +3,9 @@
 
 
 // 角度环数据PID参数
-float ROL_ANGLE_P = 2.5;   
-float ROL_ANGLE_I = 0.0001; 
-float ROL_ANGLE_D = 0.1448;  
+float ROL_ANGLE_P = 3.25;   // 500油门
+float ROL_ANGLE_I = 0.00001; 
+float ROL_ANGLE_D = 0.036;  
 
 float PIT_ANGLE_P = ROL_ANGLE_P;
 float PIT_ANGLE_I = ROL_ANGLE_I;
@@ -16,9 +16,9 @@ float YAW_ANGLE_I = 0;
 float YAW_ANGLE_D = 0;
 
 // 角速度环数据PID参数
-float ROL_RATE_P = 1.24;
-float ROL_RATE_I = 0.15233;
-float ROL_RATE_D = 0.07;
+float ROL_RATE_P = 1.10;
+float ROL_RATE_I = 0.0514;
+float ROL_RATE_D = 0.0514;
 
 float PIT_RATE_P = ROL_RATE_P;
 float PIT_RATE_I = ROL_RATE_I;
