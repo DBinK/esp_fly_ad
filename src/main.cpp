@@ -55,9 +55,9 @@ LowPassFilter msAngle_roll(0.1);  // 低通滤波器, 参数越小, 滤波效果
 LowPassFilter msAngle_pitch(0.1);
 LowPassFilter msAngle_yaw(0.1);
 
-LowPassFilter msRate_roll(0.1);
-LowPassFilter msRate_pitch(0.5);
-LowPassFilter msRate_yaw(0.9);
+LowPassFilter msRate_roll(0.7);
+LowPassFilter msRate_pitch(0.7);
+LowPassFilter msRate_yaw(0.7);
 
 UART pid_config;   // 串口增强类, 用于 vofa+ 调试 PID 参数
 
@@ -202,7 +202,7 @@ void imuControlTask(void *parameter) {
 
         // 推力控制
         rc_thr = rc_thr + (ly * 0.03);        // 从摇杆控制推力
-        rc_thr = constrain(rc_thr, 0, 400);   // 推力限制
+        rc_thr = constrain(rc_thr, 0, 450);   // 推力限制
 
         // 电机控制
         motor1 = rc_thr + outRate.roll - outRate.pitch - outRate.yaw;
@@ -212,9 +212,9 @@ void imuControlTask(void *parameter) {
 
         // 限制电机推力范围
         motor1 = constrain(motor1, 0, 1000);  // 左前
-        motor2 = constrain(motor2, 0, 1000);  // 左后 不对
-        motor3 = constrain(motor3, 0, 1000);  // 右后 不对
-        motor4 = constrain(motor4, 0, 1000);  // 右前
+        motor2 = constrain(motor2, 0, 1000);  // 右前
+        motor3 = constrain(motor3, 0, 1000);  // 右后
+        motor4 = constrain(motor4, 0, 1000);  // 左后
 
         Serial.printf("motors= %.2f %.2f %.2f %.2f  rc_thr= %.2f\n", 
                         motor1, motor2, motor3, motor4, rc_thr);
